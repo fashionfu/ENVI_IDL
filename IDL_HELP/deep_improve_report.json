@@ -1,0 +1,94 @@
+{
+  "文档版本": "3.0",
+  "处理方式": "15次遍历 + 15次查询",
+  "总函数数": 783,
+  "扫描HTML": 1217,
+  "提取示例": 776,
+  "现有函数": 330,
+  "缺失函数": 887,
+  "改进数量": 237,
+  "遍历统计": [
+    {
+      "遍历": 1,
+      "类型": "catalog",
+      "数量": 783
+    },
+    {
+      "遍历": 2,
+      "类型": "catalog",
+      "数量": 783
+    },
+    {
+      "遍历": 3,
+      "类型": "catalog",
+      "数量": 783
+    },
+    {
+      "遍历": 4,
+      "类型": "catalog",
+      "数量": 783
+    },
+    {
+      "遍历": 5,
+      "类型": "catalog",
+      "数量": 783
+    },
+    {
+      "遍历": 6,
+      "类型": "html",
+      "数量": 2918
+    },
+    {
+      "遍历": 7,
+      "类型": "html",
+      "数量": 2918
+    },
+    {
+      "遍历": 8,
+      "类型": "html",
+      "数量": 2918
+    },
+    {
+      "遍历": 9,
+      "类型": "html",
+      "数量": 2918
+    },
+    {
+      "遍历": 10,
+      "类型": "html",
+      "数量": 2918
+    }
+  ],
+  "缺失函数示例": [
+    "ENVIParameterENVIVector::Validate",
+    "ENVIPointCloudProductsInfo::Dehydrate",
+    "ENVIParameterENVITrainer::Dehydrate",
+    "ENVIPreferenceItem::Save",
+    "ENVIParameterENVIStandardRasterSpatialRef::Hydrate",
+    "ENVI_GET_RGB_TRIPLETS",
+    "ENVI_ENTER_DATA",
+    "ENVINITFCSMRasterSpatialRef::ConvertLonLatToMap",
+    "ENVIRasterMetadata::AddItem",
+    "ENVIRasterSpatialRefStandard",
+    "ENVINITFCSMRasterSpatialRef::ConvertMapToFile",
+    "ENVI_SPECTRAL_RESAMPLING_DOIT",
+    "ENVIPointCloud::Close",
+    "ENVIVectorLayer::MoveUp",
+    "ENVIView::ChipToVideo",
+    "ENVIPseudoRasterSpatialRef::ConvertLonLatToLonLat",
+    "ENVIParameterENVIStandardRasterSpatialRef::Dehydrate",
+    "ENVI_FILE_MNG",
+    "ENVI_BANDMAX_SELECT_BANDS",
+    "ENVIPointCloud::GetPointsInRect",
+    "ENVI_ASSIGN_HEADER_VALUE",
+    "ENVI_NEURAL_NET_DOIT",
+    "ENVIServer::GetJobStatus",
+    "ENVI_VEG_INDEX_AVAILABLE_INDICES",
+    "ENVIParameterENVIRasterSeriesArray::Dehydrate",
+    "ENVI_OUTPUT_TO_GDB",
+    "ENVIServer::GetSubmittedTask",
+    "ENVI_EVF_DEFINE_ADD_RECORD",
+    "ENVIPointCloudSpatialRef::ConvertLonLatToMap",
+    "ENVI::Show"
+  ]
+}
