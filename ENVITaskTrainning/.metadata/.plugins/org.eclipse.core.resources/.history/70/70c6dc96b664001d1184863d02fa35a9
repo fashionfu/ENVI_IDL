@@ -1,0 +1,129 @@
+{
+  "name":"GSF_RPCOrthorectification",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_RPCOrthorectification",
+  "display_name":"GSF_RPCOrthorectification",
+  "description":"GSF_RPCOrthorectification",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_file",
+      "display_name":"Input File",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "default":"E:/RSData/TestData_LKY/Worldview2/52298937010_01/052298937010_01/052298937010_01_P001_MUL/09DEC20024822-M2AS-052298937010_01_P001.TIF"
+    },
+    {
+      "name":"sensor_type",
+      "display_name":"Sensor Type",
+      "type":"string",
+      "choice_list":[
+        "GF1-PMS",
+        "GF1-WFV",
+        "GF2",
+        "GF4",
+        "ZY3-01A",
+        "ZY3-02A",
+        "ZY1-02C",
+        "Beijing-2",
+        "JL1-01A",
+        "SuperView-1",
+        "QuickBird",
+        "SPOT-5",
+        "SPOT-6",
+        "SPOT-7",
+        "WorldView-2",
+        "WorldView-3",
+        "WorldView-4",
+        "RapidEye",
+        "Pleiades"
+      ],
+      "direction":"input",
+      "required":true,
+      "default":"GF1-PMS"
+    },
+    {
+      "name":"dem_file",
+      "display_name":"DEM File",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"base_file",
+      "display_name":"Base File",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"pan_pixel_size",
+      "display_name":"Pan Pixel Size",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"mss_pixel_size",
+      "display_name":"Mss Pixel Size",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"resampling",
+      "display_name":"Resample Method",
+      "type":"string",
+      "choice_list":[
+        "Nearest Neighbor",
+        "Bilinear",
+        "Cubic Convolution"
+      ],
+      "direction":"input",
+      "required":false,
+      "default":"Bilinear"
+    },
+    {
+      "name":"output_format",
+      "display_name":"Output Format",
+      "type":"string",
+      "choice_list":[
+        "ENVI",
+        "TIFF"
+      ],
+      "direction":"input",
+      "required":false,
+      "default":"ENVI"
+    },
+    {
+      "name":"output_path",
+      "display_name":"Output Path",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"get_out_options",
+      "display_name":"Get Output Information",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":true
+    },
+    {
+      "name":"out_options",
+      "display_name":"Output Information",
+      "type":"hash",
+      "direction":"output",
+      "required":false
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "display_name":"Output Raster",
+      "type":"ENVIRASTER",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

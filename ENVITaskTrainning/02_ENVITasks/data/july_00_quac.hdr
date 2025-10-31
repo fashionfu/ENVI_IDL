@@ -1,0 +1,33 @@
+ENVI
+description = {
+ QUick Atmospheric Correction Result [Mon Jun 22 13:38:36 2009]}
+samples = 2000
+lines   = 2000
+bands   = 6
+data type = 2
+interleave = bsq
+file type = ENVI Standard
+header offset = 0
+byte order = 0
+map info = {UTM, 1.000, 1.000, 584145.000, 9016795.000, 3.000000e+001, 3.000000e+001, 20, South, WGS-84, units=Meters}
+coordinate system string = {PROJCS["UTM_Zone_20S",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",10000000.0],PARAMETER["Central_Meridian",-63.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]}
+x start = 2533
+y start = 4415
+band names = {
+ QUAC (Resize (TM Cal (TM Meta (Band 1):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img), 
+ QUAC (Resize (TM Cal (TM Meta (Band 2):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img), 
+ QUAC (Resize (TM Cal (TM Meta (Band 3):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img), 
+ QUAC (Resize (TM Cal (TM Meta (Band 4):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img), 
+ QUAC (Resize (TM Cal (TM Meta (Band 5):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img), 
+ QUAC (Resize (TM Cal (TM Meta (Band 7):L5231066_06620000715_MTL.txt):july_00_TOA.img):july_00_TOA_sub.img)}
+wavelength = {
+ 0.485000, 0.560000, 0.660000, 0.830000, 1.650000, 2.220000}
+wavelength units = Micrometers
+reflectance scale factor = 10000.000000
+data gain values = {
+  1.00062920e+000,  1.24824690e+000,  1.19380680e+000, -2.54806620e-002,
+  1.07295010e+000,  8.56660310e-001}
+data offset values = {
+ -5.73493040e+001, -2.87676730e+002, -1.38935770e+001,  4.07821730e+003,
+ -1.75945830e+002,  6.84519120e+001}
+sensor type = Landsat TM

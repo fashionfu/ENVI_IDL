@@ -1,0 +1,10 @@
+PRO test_VFCTask_UI
+
+  COMPILE_OPT IDL2
+  e = ENVI(/CURRENT)
+
+  taskfile = FILEPATH('VFCTask.task', root_dir=ROUTINE_DIR())
+  Task = ENVITask(taskfile)
+  
+  
+END

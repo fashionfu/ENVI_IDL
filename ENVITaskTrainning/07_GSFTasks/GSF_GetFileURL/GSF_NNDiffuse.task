@@ -1,0 +1,77 @@
+{
+    "name": "GSF_NNDiffuse",
+    "base_class": "ENVITaskFromProcedure",
+    "routine": "GSF_NNDiffuse",
+    "display_name": "GSF_NNDiffuse",
+    "description": "This task performs NNDiffuse Pan Sharpening using a low-resolution raster and a high-resolution panchromatic raster.",
+    "schema": "envitask_3.1",
+    "parameters": [
+        {
+            "name": "INPUT_LOW_RESOLUTION_RASTER",
+            "display_name": "Input Low Resolution Raster",
+            "type": "ENVIRaster",
+            "direction": "INPUT",
+            "required": true,
+            "description": "Specify a low-resolution raster."
+        },
+        {
+            "name": "INPUT_HIGH_RESOLUTION_RASTER",
+            "display_name": "Input High Resolution Raster",
+            "type": "ENVIRaster",
+            "direction": "INPUT",
+            "required": true,
+            "description": "Specify a high-resolution panchromatic raster."
+        },
+        {
+            "name": "PIXEL_SIZE_RATIO",
+            "display_name": "Pixel Size Ratio",
+            "type": "UInt",
+            "direction": "INPUT",
+            "required": false,
+            "description": "Specify the pixel size ratio. An integer that defines the pixel size ratio of the low-resolution raster and the high-resolution raster. If PIXEL_SIZE_RATIO is not specified, the value is determined from the metadata of the input rasters.",
+            "test_exact": true
+        },
+        {
+            "name": "SPATIAL_SMOOTHNESS",
+            "display_name": "Spatial Smoothness",
+            "type": "Float",
+            "direction": "INPUT",
+            "required": false,
+            "description": "Specify the spatial smoothness factor of the NNDiffuse pan-sharpening algorithm. The default value is PIXEL_SIZE_RATIO * 0.62.",
+            "inclusive_min": false,
+            "min": 0.0
+        },
+        {
+            "name": "INTENSITY_SMOOTHNESS",
+            "display_name": "Intensity Smoothness",
+            "type": "Float",
+            "direction": "INPUT",
+            "required": false,
+            "description": "Specify the intensity smoothness factor of the NNDiffuse pan-sharpening algorithm. If INTENSITY_SMOOTHNESS is not specified, the value is set adaptively using local similarity.",
+            "inclusive_min": false,
+            "min": 0.0
+        },
+        {
+            "name": "OUTPUT_RASTER_URI",
+            "keyword": "OUT_FILENAME",
+            "display_name": "Output Raster URI",
+            "type": "ENVIVirtualizableURI",
+            "direction": "INPUT",
+            "required": false,
+            "description": "Specify a string with the fully qualified filename and path to export the associated OUTPUT_RASTER. If you set this property to an asterisk symbol (*), the output raster will be virtual and not written to disk. If you do not specify this property, or set it to an exclamation symbol (!), a temporary file will be created.",
+            "auto_extension": ".dat",
+            "fold_case": true,
+            "is_temporary": true
+        },
+        {
+            "name": "OUTPUT_RASTER",
+            "keyword": "OUT_FILENAME",
+            "display_name": "Output Raster",
+            "type": "ENVIRaster",
+            "direction": "OUTPUT",
+            "required": true,
+            "description": "This is a reference to the output raster of filetype ENVI.",
+            "uri_param": "OUTPUT_RASTER_URI"
+        }
+    ]
+}

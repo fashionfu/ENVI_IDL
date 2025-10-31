@@ -1,0 +1,52 @@
+{
+   "schema": "envitask_3.0",
+   "show_preview": false,
+   "show_display_result": true,
+   "parameters": [
+    {
+       "name": "INPUT_RASTER",
+       "type": "ENVIRaster_UI",
+       "keywords": {
+         "DISABLE_SUB_RECT": true,
+         "DISABLE_BANDS": true,
+         "MULTIPLE": true
+         }	  
+    },
+    {
+       "name": "ColorMap",
+       "type": "ENVIColorMap_UI"
+    },
+    {
+       "name": "ColorMapName",
+       "type": "ENVIColorMapName_UI"
+    },
+    {
+       "name": "CoordSys",
+       "type": "ENVICoordSys_UI"
+    },
+    {
+       "name": "Time",
+       "type": "ENVITime_UI"
+    },
+    {
+       "name": "INPUT_URI",
+       "type": "ENVIURI_UI",
+       "keywords": "MULTIPLE"
+    },
+    {
+       "name": "AddRemoveList",
+       "type": "IDLAddRemoveList_UI",
+	   "keywords": {
+          "OPTIONS": ["Band 1", "Band 2", "Band 3", "Band 4"]
+       }
+    },
+    {
+       "name": "Slider",
+       "type": "IDLSlider_UI"
+    },
+    {
+       "name": "Wheel",
+       "type": "IDLWheel_UI"
+    }
+  ]
+}

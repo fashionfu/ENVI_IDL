@@ -1,0 +1,68 @@
+{
+  "name":"NDVIColorSliceBatchTask",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"NDVIColorSliceBatchTask",
+  "display_name":"NDVI ColorSlice Batch",
+  "description":"NDVI ColorSlice Batch",
+  "revision":"1.0.0",
+  "schema":"envitask_3.2",
+  "parameters":[
+    {
+      "name":"INPUT_RASTERS",
+      "display_name":"Input Rasters",
+      "type":"ENVIRASTERArray",
+      "dimensions":"[*]",
+      "direction":"input",
+      "required":true,
+      "description":"Specify the input rasters."
+    },
+    {
+      "name":"COLOR_TABLE_NAME",
+      "display_name":"Color Table",
+      "direction":"input",
+      "type":"string",
+      "required":true,
+      "default":"CB-Greens",
+      "description":"Color Table Name."
+    },
+    {
+      "name":"NUMBER_OF_RANGES",
+      "display_name":"Number of Classes",
+      "type":"uint",
+      "direction":"input",
+      "required":true,
+      "default":5,
+      "description":"Number of Ranges."
+    },
+    {
+      "name":"display_results",
+      "display_name":"Display Results",
+      "type":"bool",
+      "direction":"INPUT",
+      "required":true,
+      "description":"Display results or not.",
+      "default":true
+    },
+    {
+      "name":"output_extension",
+      "display_name":"Output Extension",
+      "type":"string",
+      "direction":"INPUT",
+      "required":true,
+      "description":"Specify the extention of output filename.",
+      "default":"_ndvi_class.dat"
+    },
+    {
+      "name":"output_dir",
+      "keyword":"output_dir",
+      "display_name":"Output Path",
+      "type":"ENVIURI",
+      "direction":"INPUT",
+      "required":true,
+      "is_directory":true, 
+      "description":"Specify the output path.",
+      "fold_case":true,
+      "is_temporary":false
+    }
+  ]
+}

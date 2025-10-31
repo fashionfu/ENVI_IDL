@@ -1,0 +1,26 @@
+{
+  "name":"FileDeleteTask",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_FileDeleteTask",
+  "display_name":"FileDeleteTask",
+  "description":"FileDeleteTask.",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"files",
+      "display_name":"Input Files",
+      "type":"ENVIURIArray",
+      "dimensions": "[*]",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"rasters",
+      "display_name":"Input Rasters",
+      "type":"ENVIRasterArray",
+      "dimensions": "[*]",
+      "direction":"input",
+      "required":false
+    }
+  ]
+}

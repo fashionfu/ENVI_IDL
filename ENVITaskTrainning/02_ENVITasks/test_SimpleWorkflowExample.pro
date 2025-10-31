@@ -1,0 +1,24 @@
+PRO test_SimpleWorkflowExample
+  COMPILE_OPT IDL2
+  e = ENVI()
+  ;初始化工作流
+  workflow = ENVIWorkflow(title='ISODATA Workflow')
+  ;步骤1：QUAC
+  step1 = ENVIWorkflowStep(timeline_title='QUAC')
+  step1.TASK = ENVITask('QUAC')
+  ;步骤2：ISODATA分类
+  step2 = ENVIWorkflowStep()
+  step2.TASK = ENVITask('ISODATAClassification')
+  ;步骤3：分类后平滑处理
+  step3 = ENVIWorkflowStep()
+  step3.TASK = ENVITask('ClassificationSmoothing')
+  ;步骤4：输出TIFF格式
+  step4 = ENVIWorkflowStep()
+  step4.TASK = ENVITask('ExportRasterToTIFF')
+  ;参数链接
+  workflow.Connect, step1, 'OUTPUT_RASTER', step2, 'INPUT_RASTER'
+  workflow.Connect, step2, 'OUTPUT_RASTER', step3, 'INPUT_RASTER
+  workflow.Connect, step3, 'OUTPUT_RASTER', step4, 'INPUT_RASTER'
+  ;显示工作流界面
+  ENVI.UI.CreateWorkflowDialog, workflow
+END

@@ -1,0 +1,5 @@
+请访问如下网址获取详细介绍：
+https://envi.geoscene.cn/gsf
+
+请将 GSF_GetFileURL 文件夹拷贝到 ENVI 安装路径中的 custom_code 文件夹中，便可以调用提供的接口
+C:\Program Files\Harris\ENVI56\custom_code\

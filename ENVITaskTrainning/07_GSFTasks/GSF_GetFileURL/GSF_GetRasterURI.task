@@ -1,0 +1,24 @@
+{
+  "name":"GSF_GetRasterURI",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_GetRasterURI",
+  "display_name":"GSF_GetRasterURI",
+  "description":"GSF_GetRasterURI.",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_raster",
+      "display_name":"Input Raster",
+      "type":"ENVIRaster",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output_uri",
+      "display_name":"Output URI",
+      "type":"ENVIURI",
+      "direction":"output",
+      "required":true
+    }
+  ]
+}

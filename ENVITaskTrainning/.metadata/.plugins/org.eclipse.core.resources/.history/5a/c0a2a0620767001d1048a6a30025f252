@@ -1,0 +1,62 @@
+{
+  "name":"test_VFC",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"test_VFC",
+  "display_name":"Test VFC",
+  "description":"Use this template as a reference when building tasks for a new procedure.",
+  "revision":"1.0.0",
+  "schema":"envitask_3.2",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "display_name":"Input Raster",
+      "type":"ENVIRASTER",
+      "direction":"input",
+      "required":true,
+      "description":"Specify an input raster to process."
+    },
+    {
+      "name":"MINIMUM_NDVI",
+      "display_name":"Minimum NDVI",
+      "type":"FLOAT",
+      "direction":"input",
+      "required":true,
+      "default":0.05,
+      "min":0.0,
+      "max":1.0,
+      "description":"Specify the minimum NDVI."
+    },
+    {
+      "name":"MAXIMUM_NDVI",
+      "display_name":"Maximum NDVI",
+      "type":"FLOAT",
+      "direction":"input",
+      "required":true,
+      "default":0.70,
+      "min":0.0,
+      "max":1.0,
+      "description":"Specify the maximum NDVI."
+    },
+    {
+      "name":"OUTPUT_RASTER_URI",
+      "keyword":"output_uri",
+      "display_name":"Output Raster URI",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":false,
+      "description":"Specify the output filename.",
+      "auto_extension":".dat",
+      "is_temporary":true
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "keyword":"output_uri",
+      "display_name":"Output Raster",
+      "type":"ENVIRASTER",
+      "direction":"output",
+      "required":true,
+      "description":"This is a reference to the output raster of filetype ENVI.",
+      "uri_param":"OUTPUT_RASTER_URI"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+pro IsoData, file=file,     $
+  n_classes=n_classes,      $
+  output_path=output_path
+
+  COMPILE_OPT idl2
+  e=envi()
+  ;
+  ;  file='C:\Program Files\Harris\ENVI54\data\qb_boulder_msi'
+  ;  output_path = 'D:\temp\'
+  ;  n_classes = 5
+  if ~N_ELEMENTS(n_classes) then n_classes=5
+
+  dotpos=strpos(file,'.',/REVERSE_SEARCH)
+  format=strmid(file,dotpos)
+  fname=file_basename(file,format)
+  output_file = FILEPATH(fname+'_isodata.dat', $
+    ROOT_DIR=output_path)
+
+  raster=e.OpenRaster(file)
+  ;
+  Task = ENVITask('ISODATAClassification')
+  task.input_raster=raster
+  task.number_of_classes=n_classes
+  task.iterations=1
+  task.execute
+  smoothTask = ENVITask('ClassificationSmoothing')
+  smoothTask.input_raster=task.output_raster
+  smoothTask.kernel_size=5
+  smoothTask.output_raster_uri=output_file
+  smoothTask.execute
+  ;  e.data.add, smoothTask.output_raster
+
+  GSF_GetFileURL, input_raster=smoothTask.output_raster,  $ ;输入图像
+    /get_pngfile_url, /get_legend_url,        $ ;获取信息
+    /get_map_extent, /get_zipfile_url, map_type='wgs84', $ ;'wgs84'/'map'/'web',默认为wgs84
+    out_options=out_options
+end

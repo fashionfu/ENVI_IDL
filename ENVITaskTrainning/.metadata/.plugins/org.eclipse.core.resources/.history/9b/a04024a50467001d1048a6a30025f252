@@ -1,0 +1,41 @@
+;+
+; :Description:
+;    本例演示如何调用NNDiffuse图像融合Task
+;
+; :Author: duhj@geoscene.cn
+;
+; :Date: 2018-3-15 9:34:01
+;-
+PRO test_NNDiffusePanSharpening
+
+  COMPILE_OPT idl2
+  e=envi()
+
+  ;输入文件路径
+  mss_file=FILEPATH('qb_boulder_msi', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  pan_file=FILEPATH('qb_boulder_pan', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  ;打开栅格图像
+  mss_raster=e.OpenRaster(mss_file)
+  pan_raster=e.OpenRaster(pan_file)
+  ;
+  ;初始化图像融合ENVITask
+  Task = ENVITASK('NNDiffusePanSharpening')
+  ;定义输入输出参数
+  Task.INPUT_LOW_RESOLUTION_RASTER  = mss_raster
+  Task.INPUT_HIGH_RESOLUTION_RASTER = pan_raster
+  Task.OUTPUT_RASTER_URI = e.GetTemporaryFilename(/cleanup_on_exit)
+
+  ; 执行ENVITask
+  Task.Execute
+
+  ; 显示原始多光谱和融合结果
+  View = e.GetView()
+  nndLayer = View.CreateLayer(Task.OUTPUT_RASTER)
+  mulLayer = View.CreateLayer(mss_raster)
+
+  ;透视窗口
+  portal = View.CreatePortal()
+  portal.SIZE = [300,300]
+END

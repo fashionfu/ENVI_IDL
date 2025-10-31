@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">&#x0A;<refactoring comment="将资源“07_GSFTasks/_GSF_JS/Image.png”重命名为“安装axios命令.png”" description="重命名资源“Image.png”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="_GSF_JS/Image.png" name="安装axios命令.png" stamp="1668759677753" updateReferences="true"/>&#x0A;<refactoring comment="将资源“07_GSFTasks/_GSF_JS/NDVI.js”重命名为“SpectralIndex.js”" description="重命名资源“NDVI.js”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="_GSF_JS/NDVI.js" name="SpectralIndex.js" stamp="1668759790788" updateReferences="true"/>
+</session>

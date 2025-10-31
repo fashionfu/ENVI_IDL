@@ -1,0 +1,20 @@
+ENVI
+description = {
+  Applied Mask Result [Tue Jun 24 10:59:50 2014]}
+samples = 1656
+lines   = 1251
+bands   = 1
+header offset = 0
+file type = ENVI Standard
+data type = 4
+interleave = bsq
+sensor type = Unknown
+byte order = 0
+x start = 4119
+y start = 7028
+map info = {UTM, 1.000, 1.000, 741596.389, 4218907.146, 3.0000000000e+001, 3.0000000000e+001, 10, North, WGS-84, units=Meters}
+coordinate system string = {PROJCS["WGS_1984_UTM_Zone_10N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-123.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]}
+wavelength units = Unknown
+pixel size = {3.00000000e+001, 3.00000000e+001, units=Meters}
+band names = {
+ ROI Mask (Resize (Slope (Layer_1:DEM_USGS_1_3_ArcSecond.dat):RimFire_Slope_from_DEM):RimFire_Slope_30px)}

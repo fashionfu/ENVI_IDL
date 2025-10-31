@@ -1,0 +1,72 @@
+{
+  "name": "ECOVegetationIndex",
+  "display_name": "ECOVegetationIndex",
+  "base_class": "ENVITaskFromProcedure",
+  "routine": "ECOVegetationIndex",
+  "description": "ECOVegetationIndex",
+  "schema": "envitask_3.0",
+  "parameters": [
+    {
+      "name":"input_file",
+      "display_name":"Input File",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name": "product_type",
+      "direction": "input",
+      "type": "stringArray",
+      "dimensions": "[*]",
+      "display_name": "Product Type",
+      "required": false,
+      "default": ["NDVI"]
+    },
+    {
+      "name": "roi_coords",
+      "direction": "input",
+      "type": "string",
+      "display_name": "ROI Coords",
+      "required": false
+    },
+    {
+      "name": "apply_quac",
+      "direction": "input",
+      "type": "bool",
+      "display_name": "Apply QUAC",
+      "default": 0,
+      "required": false
+    },
+    {
+      "name":"output_format",
+      "display_name":"Output Format",
+      "type":"string",
+      "direction":"input",
+      "required":false,
+      "choice_list": ["ENVI", "TIFF"],
+      "default":"TIFF"
+    },
+    {
+      "name":"output_dir",
+      "display_name":"Output Directory",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"out_auxiliary",
+      "display_name":"Auxiliary Files",
+      "type":"bool",
+      "direction":"input",
+      "default":1,
+      "required":false
+    },
+    {
+      "name":"out_options",
+      "display_name":"Output Information",
+      "type":"hash",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

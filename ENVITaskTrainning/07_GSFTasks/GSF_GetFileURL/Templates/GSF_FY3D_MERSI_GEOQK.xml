@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3D_MERSI_GEOQK">
+    <RASTER>
+      <DATASET>//Longitude</DATASET>
+    </RASTER>
+    <RASTER>
+      <DATASET>//Latitude</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

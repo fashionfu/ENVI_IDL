@@ -1,0 +1,88 @@
+pro test_isodata_task,      $
+  file=file,                $
+  iterations=iterations,    $
+  num_classes=num_classes,  $
+  kernel_size=kernel_size,  $
+  minimum_size=minimum_size,$
+  output_path=output_path,  $
+  out_options=out_options
+
+  COMPILE_OPT idl2
+  e=envi(/headless)
+  ;testcode
+  ;  file='D:\ENVITaskTrainning\02_ENVITasks\data\beijing_miyun.dat'
+  ;  iterations=1
+  ;  num_classes=5
+  ;  kernel_size=3
+  ;  minimum_size=100
+  ;  output_path='D:\temp\'
+
+  iterations = fix(iterations)
+  num_classes = fix(num_classes)
+  kernel_size = fix(kernel_size)
+  minimum_size = fix(minimum_size)
+
+  ;设置输出分类图像文件路径
+  GSF_Get_Output_Filename,          $
+    input_file=file,                $ ;输入文件名
+    file_extension='_isodata.dat',  $ ;后缀
+    output_path=output_path,        $ ;当设置为same时，输出路径与输入路径一致
+    delete_exist=1,                 $ ;设置为1，则删除已存在文件
+    output_file=output_raster_uri
+
+  ;设置输出矢量结果文件路径
+  GSF_Get_Output_Filename,          $
+    input_file=output_raster_uri,   $ ;输入文件名
+    file_extension='_vector.shp',   $ ;后缀
+    output_path='same',             $ ;当设置为same时，输出路径与输入路径一致
+    delete_exist=1,                 $ ;设置为1，则删除已存在文件
+    output_file=output_vector_uri
+
+  ;  file_bname = file_basename(output_raster_uri)
+  ;  dotidx = strpos(file_bname,'.',/REVERSE_SEARCH)
+  ;  fileformat = strmid(file_bname,dotidx)
+  ;  output_vector_uri = output_raster_uri.Replace( $
+  ;    fileformat,'_vector.shp')
+
+  raster = e.OpenRaster(file)
+  ;
+  ;IsoDATA非监督分类
+  Task = ENVITask('ISODATAClassification')
+  Task.INPUT_RASTER = raster
+  Task.CHANGE_THRESHOLD_PERCENT = 2.0
+  Task.ITERATIONS = iterations
+  Task.NUMBER_OF_CLASSES = num_classes
+  Task.Execute
+
+  ;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  SmoothTask.INPUT_RASTER = Task.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = kernel_size
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.MINIMUM_SIZE = minimum_size
+  AggregationTask.OUTPUT_RASTER_URI = output_raster_uri
+  AggregationTask.EXECUTE
+
+  ;转换为Shapefile
+  n_classes = AggregationTask.OUTPUT_RASTER.METADATA['CLASSES']
+  class_names = AggregationTask.OUTPUT_RASTER.METADATA['CLASS NAMES']
+  export_classes = class_names[1:(n_classes-2)]
+
+  ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+  ClassToVectorTask.INPUT_RASTER = AggregationTask.OUTPUT_RASTER
+  ClassToVectorTask.EXPORT_CLASSES = export_classes
+  ClassToVectorTask.OUTPUT_VECTOR_URI = output_vector_uri
+  ClassToVectorTask.EXECUTE
+
+  ;获取栅格结果
+  GSF_GetFileURL, $
+    input_raster=AggregationTask.OUTPUT_RASTER,  $ ;输入图像
+    input_vector=ClassToVectorTask.OUTPUT_VECTOR, $
+    /get_pngfile_url, /get_legend_url, $ ;获取信息
+    /get_map_extent, map_type='wgs84', $ ;'wgs84'/'map'/'web',默认为wgs84
+    /get_zipfile_url, out_options=out_options
+end

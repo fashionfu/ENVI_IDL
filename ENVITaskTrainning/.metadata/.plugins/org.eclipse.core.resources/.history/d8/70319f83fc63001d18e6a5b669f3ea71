@@ -1,0 +1,97 @@
+{
+  "name":"GSF_Change_Detection",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_Change_Detection",
+  "display_name":"GSF_Change_Detection",
+  "description":"GSF_Change_Detection",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_file1",
+      "display_name":"Input File 1",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"input_file2",
+      "display_name":"Input File 2",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"detect_method",
+      "display_name":"Detect Method",
+      "type":"String",
+      "direction":"input",
+      "choice_list":[
+        "BandDifference",
+        "FeatureDifference"
+      ],
+      "required":true,
+      "default":"BandDifference"
+    },
+    {
+      "name":"band_index",
+      "display_name":"Band Index",
+      "type":"UINT",
+      "direction":"input",
+      "required":false,
+      "default":1
+    },
+    {
+      "name":"feature_index",
+      "display_name":"Feature Index",
+      "type":"string",
+      "direction":"input",
+      "choice_list":[
+        "NDVI",
+        "NDWI",
+        "NDBI",
+        "NBR"
+      ],
+      "required":false,
+      "default":"NDVI"
+    },
+    {
+      "name":"smooth_size",
+      "display_name":"Smooth Kernel Size",
+      "type":"UINT",
+      "direction":"input",
+      "required":false,
+      "default":5
+    },
+    {
+      "name":"aggregate_size",
+      "display_name":"Aggregate Minimum Size",
+      "type":"UINT",
+      "direction":"input",
+      "required":false,
+      "default":100
+    },
+    {
+      "name":"export_vector",
+      "display_name":"Export Vector",
+      "type":"Bool",
+      "direction":"input",
+      "required":false,
+      "default":"No"
+    },
+    {
+      "name":"output_path",
+      "display_name":"Output Path",
+      "type":"ENVIURI",
+      "is_directory": true,
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"out_options",
+      "display_name":"Output Information",
+      "type":"hash",
+      "direction":"output",
+      "required":true
+    }
+  ]
+}

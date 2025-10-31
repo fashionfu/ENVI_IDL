@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“06_GSFTasks/GSF_MODIS_WATER/DTH_ThematicProducts_Sentinel2.task”重命名为“GSF_MODIS_WATER.task”" description="重命名资源“DTH_ThematicProducts_Sentinel2.task”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="GSF_MODIS_WATER/DTH_ThematicProducts_Sentinel2.task" name="GSF_MODIS_WATER.task" stamp="1575292962525" updateReferences="true"/>
+</session>

@@ -1,0 +1,19 @@
+PRO test_VFCTask_UI
+
+  COMPILE_OPT IDL2
+  e = ENVI(/CURRENT)
+
+  ;;打开栅格图像
+  file = FILEPATH('qb_boulder_msi', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  raster=e.OpenRaster(file)
+
+  ;当自定义 ENVITask 未部署到 ENVI 路径时，可以使用 task 文件完整路径进行初始化
+  taskfile = FILEPATH('VFCTask.task', root_dir=ROUTINE_DIR())
+  task = ENVITask(taskfile)
+
+  ;设置参数
+  task.
+
+
+END

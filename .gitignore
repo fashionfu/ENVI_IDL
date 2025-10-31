@@ -1,0 +1,41 @@
+# IDL/ENVI 项目忽略文件
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*~
+
+# IDL编译文件
+*.sav
+
+# ENVI临时文件
+*.enp
+
+# 大文件（数据文件）
+*.dat
+*.img
+*.hdf
+*.tif
+*.tiff
+*.jp2
+
+# 压缩包
+*.zip
+*.rar
+*.7z
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE配置
+.vscode/
+.idea/
+
+# 输出目录
+output/
+results/
+temp/
+

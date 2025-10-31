@@ -1,0 +1,293 @@
+PRO GSF_RPCOrthorectification,     $ ;常见卫星正射校正服务
+  input_file     = input_file,     $ ;必选。字符串。输入文件
+  sensor_type    = sensor_type,    $ ;必选。字符串。传感器类型。可选项如下：
+  ;                                   "GF1-PMS", "GF1-WFV", "GF2", "GF4", "ZY3-01A", "ZY3-02A", "ZY1-02C"
+  ;                                   "Beijing-2", "JL1-01A", "SuperView-1"
+  ;                                   "SPOT-6", "SPOT-7", "RapidEye", "Pleiades"
+  ;                                   "WorldView-2", "WorldView-3", "WorldView-4", "QuickBird"
+  dem_file       = dem_file,       $ ;可选。字符串。DEM图像。若不设置，则使用ENVI自带全球900米DEM数据
+  base_file      = base_file,      $ ;可选。字符串。基准图像。若不设置，将执行无控正射校正
+  pan_pixel_size = pan_pixel_size, $ ;可选。字符串。全色分辨率。若不设置，则根据传感器类型自行设置
+  mss_pixel_size = mss_pixel_size, $ ;可选。字符串。多光谱分辨率。若不设置，则根据传感器类型自行设置
+  resampling     = resampling,     $ ;可选。字符串。重采样方法。可选项有 Nearest Neighbor、Bilinear（默认项）、Cubic Convolution
+  output_format  = output_format,  $ ;可选。字符串。输出格式。可选项有 ENVI、TIFF（默认项）
+  output_path    = output_path,    $ ;可选。字符串。输出路径。若不设置，则输出到当前目录
+  out_options    = out_options       ;可选。JSON。返回结果
+
+  COMPILE_OPT idl2
+  e = ENVI(/HEADLESS)
+
+  ;test code
+  ;  input_file='C:\Works\2022ENVI培训班素材包\ENVI练习数据\101-处理专题：高分一号二号PMS数据处理\01-高分一号PMS数据\GF1_PMS2_E104.0_N36.0_20140724_L1A0000284766\GF1_PMS2_E104.0_N36.0_20140724_L1A0000284766-MSS2.xml'
+  ;  sensor_type='GF1-PMS'
+  
+  ;设置输出路径
+  CD, current=curdir
+  IF ~KEYWORD_SET(output_path) THEN output_path =curdir
+
+  sensor_type = STRUPCASE(sensor_type)
+
+  ;打开输入影像
+  CASE sensor_type OF
+    'GF1-PMS': Raster = ENVI_Open_GF1_Raster(input_file)
+    'GF1-WFV': Raster = ENVI_Open_GF1_Raster(input_file)
+    'GF2': Raster = ENVI_Open_GF2_Raster(input_file)
+    'GF4': Raster = ENVI_Open_GF4_Raster(input_file)
+    'ZY3-01A': Raster = ENVI_Open_ZY301a_Raster(input_file)
+    'ZY3-02A': Raster = ENVI_Open_ZY302a_Raster(input_file)
+    'ZY1-02C': Raster = ENVI_Open_ZY102c_Raster(input_file)
+    'CBERS04': Raster = ENVI_Open_CBERS04_Raster(input_file)
+    'BEIJING-2': Raster = ENVI_Open_TRIPLESAT_Raster(input_file)
+    'JL1-01A': Raster = ENVI_Open_JL101A_Raster(input_file)
+    'SUPERVIEW-1': Raster = ENVI_Open_SuperView01_Raster(input_file)
+    ELSE: Raster = e.OpenRaster(input_file)
+  ENDCASE
+
+  ;将字符串分辨率转换为Double
+  IF KEYWORD_SET(pan_pixel_size) THEN pan_pixel_size = double(pan_pixel_size)
+  IF KEYWORD_SET(mss_pixel_size) THEN mss_pixel_size = double(mss_pixel_size)
+
+  ;打开DEM文件
+  IF ~KEYWORD_SET(dem_file) THEN dem_file = FILEPATH('GMTED2010.jp2', $
+    root_dir=e.root_dir, subdirectory = ['data'])
+  demRaster = e.OpenRaster(dem_file)
+
+  ;根据传感器类型不同，设置不同参数
+  CASE sensor_type OF
+    'GF1-PMS'  : BEGIN  ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=2.0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=8.0
+      Bands=[2,1,0]
+    END
+    'GF1-WFV'  : BEGIN  ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=16.0
+      Bands=[2,1,0]
+    END
+    'GF2'  : BEGIN      ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.8
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=3.2
+      Bands=[2,1,0]
+    END
+    'GF4'  : BEGIN      ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=50
+      Bands=[2,1,0]
+    END
+    'ZY3-01A'   : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=2.1
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=8.4
+      Bands=[2,1,0]
+    END
+    'ZY3-02A'   : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=2.1
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=8.4
+      Bands=[2,1,0]
+    END
+    'ZY1-02C'   : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=5.0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=10.0
+      Bands=[2,1,0]
+    END
+    'BEIJING-2' : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=1.0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=4.0
+      Bands=[2,1,0]
+    END
+    'JL1-01A'   : BEGIN ;tif
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.72
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=2.88
+      Bands=[2,1,0]
+    END
+    'SUPERVIEW-1': BEGIN;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.5
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=2.0
+      Bands=[2,1,0]
+    END
+    'QUICKBIRD' : BEGIN ;til
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.61
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=2.44
+      Bands=[2,1,0]
+    END
+    'SPOT-6'     : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=1.5
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=6.0
+      Bands=[2,1,0]
+    END
+    'SPOT-7'     : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=1.5
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=6.0
+      Bands=[2,1,0]
+    END
+    'WORLDVIEW-2': BEGIN ;til
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.5
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=2.0
+      Bands=[4,2,1]
+    END
+    'WORLDVIEW-3': BEGIN ;til
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.31
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=1.24
+      Bands=[2,1,0]
+    END
+    'WORLDVIEW-4': BEGIN ;til
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.31
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=1.14
+      Bands=[2,1,0]
+    END
+    'RAPIDEYE'  : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.0
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=5.0
+      Bands=[2,1,0]
+    END
+    'PLEIADES'  : BEGIN ;xml
+      IF ~ISA(pan_pixel_size) THEN pan_pixel_size=0.5
+      IF ~ISA(mss_pixel_size) THEN mss_pixel_size=2.0
+      Bands=[2,1,0]
+    END
+    ELSE: RETURN
+  ENDCASE
+
+  ;根据波段数判断全色、多光谱，确定输出文件名后缀
+  CASE Raster.NBANDS OF
+    1: BEGIN
+      output_pixel_size = [pan_pixel_size,pan_pixel_size]
+      out_extension = '_PAN_RPCOrtho'
+    END
+    ELSE: BEGIN
+      output_pixel_size = [mss_pixel_size,mss_pixel_size]
+      out_extension = '_MSS_RPCOrtho'
+    END
+  ENDCASE
+
+  ;输出文件
+  fbasename = GSF_FileBaseName(input_file) + '_RPCORTHO'
+
+  ;如果输出为ENVI格式
+  output_format = STRUPCASE(output_format)
+  CASE output_format OF
+    'ENVI': fbasename += '.dat'
+    'TIFF': fbasename += '.tif'
+  ENDCASE
+  output_file = FILEPATH(fbasename, root_dir=output_path)
+  GSF_FileDelete, output_file
+
+  ;base_file不存在时，执行无控正射校正 或 使用pts文件
+  IF N_ELEMENTS(base_file) NE 0 && FILE_TEST(base_file) THEN BEGIN
+
+    ;如果使用参考影像，需要对参考影像进行裁剪、重投影
+    ;打开参考影像
+    baseRaster = e.OpenRaster(base_file)
+
+    baseRef = baseRaster.SPATIALREF
+    baseRefType = STRMID(baseRef.COORD_SYS_STR,0,6)
+
+    ;如果参考图像为投影坐标系，则不需要进行投影转换
+    IF STRMATCH(baseRefType, 'PROJCS', /FOLD_CASE) THEN BEGIN
+
+      newBaseRaster = baseRaster
+
+    ENDIF ELSE BEGIN
+
+      ;获取待校正影像4个角文件坐标，并转换为地理坐标
+      FileX = [0, Raster.NCOLUMNS-1, Raster.NCOLUMNS-1, 0]
+      FileY = [0, 0, Raster.NROWS-1, Raster.NROWS-1]
+      warpRef = Raster.SPATIALREF
+      baseRef = baseRaster.SPATIALREF
+      ;将地理坐标转换为参考影像的地理坐标
+      warpRef.ConvertFileToMap, FileX, FileY, MapX, MapY
+      warpRef.ConvertMapToMap, MapX, MapY, MapXX, MapYY, baseRef
+      baseRef.ConvertMapToFile, MapXX, MapYY, FileXX, FileYY
+
+      ;创建Albers坐标系 102025
+      ;    Params = a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
+      COORD_SYS_CODE = 102025L
+      Params = [6378137.0000000000, 6356752.3142451793, $
+        0.0, 105.0, 0.0, 0.0, 25.0, 47.0]
+      o_proj = ENVI_PROJ_CREATE(type=9, datum='WGS-84', $
+        name='Asia_North_Albers_Equal_Area_Conic', Params=Params)
+
+      ;将裁减后的基准图像重投影到待校正坐标系下，获取同一坐标系下的分辨率
+      warpCoordSys = ENVICOORDSYS(COORD_SYS_CODE = COORD_SYS_CODE)
+      albers_baseRaster = ENVIREPROJECTRASTER(baseRaster, $
+        COORD_SYS=warpCoordSys)
+      albersRef = albers_baseRaster.SPATIALREF
+      ;重采样到低分辨率。
+      reproj_output_size = [output_pixel_size,output_pixel_size] > albersRef.PIXEL_SIZE
+      albers_baseRaster.Close
+      ;
+      referenceFid = ENVIRASTERTOFID(baseRaster)
+      dims = LONG64([-1L, MIN(FileXX),MAX(FileXX),MIN(FileYY),MAX(FileYY)])
+      pos = LINDGEN(baseRaster.NBANDS)
+
+      ;将裁剪和重投影后的新参考图像保存到临时文件中
+      new_base_file = e.GetTemporaryFilename('gsftemp.dat')
+      ;执行投影转换
+      ENVI_CONVERT_FILE_MAP_PROJECTION, fid=referenceFid,   $
+        pos=pos, dims=dims, o_proj=o_proj,                  $
+        o_pixel_size=reproj_output_size,                    $
+        grid=[25,25], out_name=new_base_file,                 $
+        warp_method=1, resampling=0,                        $
+        background=0, degree=2, r_fid=r_fid
+      ;关闭新的参考影像，并重新打开
+      ENVI_FILE_MNG, id=r_fid, /remove
+
+      ;打开新的基准影像
+      newBaseRaster = e.OpenRaster(new_base_file)
+    ENDELSE
+
+    ;初始化task，使用ENVI自带Task
+    Task = ENVITask('RPCOrthorectificationUsingReferenceImage')
+    Task.INPUT_RASTER = Raster
+    Task.INPUT_DEM_RASTER = demRaster
+    Task.DEM_IS_HEIGHT_ABOVE_ELLIPSOID = 0
+    Task.REQUESTED_NUMBER_OF_GCPS = 1000
+    Task.RESAMPLING = resampling
+    Task.OUTPUT_PIXEL_SIZE = output_pixel_size
+    Task.GRID_SPACING = 10
+    Task.INPUT_REFERENCE_RASTER = newBaseRaster
+
+  ENDIF ELSE BEGIN
+    ;如果没有base_file，仅作无控正射校正
+    ;初始化正射Task
+    Task = ENVITASK('RPCOrthorectification')
+    ;设置输入参数
+    Task.INPUT_RASTER = Raster
+    Task.DEM_RASTER = demRaster
+    Task.RESAMPLING = resampling
+    Task.DEM_IS_HEIGHT_ABOVE_ELLIPSOID = 0
+    Task.GRID_SPACING = 10
+    Task.OUTPUT_PIXEL_SIZE = output_pixel_size
+
+  ENDELSE
+
+  ;如果输出为ENVI格式
+  IF output_format EQ 'ENVI' THEN Task.OUTPUT_RASTER_URI = output_file
+
+  ;运行正射纠正
+  Task.Execute
+
+  ;删除临时文件
+  IF N_ELEMENTS(new_base_file) THEN BEGIN
+    newBaseRaster.Close, error=err
+    tmpFiles = FILE_SEARCH(FILE_DIRNAME(new_base_file),'*gsftemp*',count=c)
+    IF c NE 0 THEN FILE_DELETE, tmpFiles, /quiet
+  ENDIF
+
+  ;如果输出为TIFF
+  IF output_format EQ 'TIFF' THEN Task.OUTPUT_RASTER.EXPORT, output_file, 'tiff'
+
+  OUTPUT_RASTER = e.OpenRaster(output_file)
+
+  ;如果提供了关键字out_options，才去获取结果信息，否则返回Raster
+  IF KEYWORD_SET(get_out_options) THEN BEGIN
+
+    ;如果为全色图像 或 3个波段的数据时，获取PNG图片时的波段组合
+    IF Task.OUTPUT_RASTER.NBANDS LE 2 THEN Bands = [0]
+    IF Task.OUTPUT_RASTER.NBANDS EQ 3 THEN Bands = [0,1,2]
+
+    ;获取快视图/压缩包URL/地理范围
+    GSF_GetFileURL, input_raster=OUTPUT_RASTER, Bands=Bands, $
+      /get_pngfile_url, /get_map_extent, /get_zipfile_url,   $
+      data_ignore_value=0, /linear_stretch, out_options=out_options
+  ENDIF
+END

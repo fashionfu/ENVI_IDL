@@ -1,0 +1,78 @@
+{
+  "name": "GSF_MODIS_WATER",
+  "display_name": "GSF_MODIS_WATER",
+  "base_class": "ENVITaskFromProcedure",
+  "routine": "GSF_MODIS_WATER",
+  "description": "GSF_MODIS_WATER",
+  "schema": "envitask_3.0",
+  "parameters": [
+    {
+      "name": "input_file",
+      "direction": "input",
+      "type": "string",
+      "display_name": "Input File",
+      "required": true
+    },
+    {
+      "name": "input_raster",
+      "direction": "input",
+      "type": "ENVIRaster",
+      "display_name": "Input Raster",
+      "required": false
+    },
+    {
+      "name": "roi_coords",
+      "direction": "input",
+      "type": "string",
+      "display_name": "ROI Coords",
+      "required": false
+    },
+    {
+      "name": "product_type",
+      "direction": "input",
+      "type": "string",
+      "display_name": "product type",
+      "required": false,
+      "default":"RGB,Water,Chla,TSS,TLI,NDVI,VFC"
+    },
+    {
+      "name": "chla_model",
+      "direction": "input",
+      "type": "string",
+      "display_name": "chla model",
+      "required": false,
+      "default": "(4.089*(nir/red)^2-0.746*(nir/red)+29.733)/1000"
+    },
+    {
+      "name": "tss_model",
+      "direction": "input",
+      "type": "string",
+      "display_name": "tss model",
+      "required": false,
+      "default": "119.62*(red/green)^6.0823"
+    },
+    {
+      "name": "tli_model",
+      "direction": "input",
+      "type": "string",
+      "display_name": "tli model",
+      "required": false,
+      "default": "5.4*(2.5+1.086*alog(chla))+4.6*(5.118+0.49*alog(tss))"
+    },
+    {
+      "name": "local_test",
+      "direction": "input",
+      "type": "bool",
+      "display_name": "local test",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "out_options",
+      "direction": "output",
+      "type": "hash",
+      "display_name": "Output Information",
+      "required": false
+    }
+  ]
+}

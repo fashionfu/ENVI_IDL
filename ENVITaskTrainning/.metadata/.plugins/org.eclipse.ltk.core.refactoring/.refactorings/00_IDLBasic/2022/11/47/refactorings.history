@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“00_IDLBasic/test_IDLffShape”重命名为“test_IDLffShape.pro”" description="重命名资源“test_IDLffShape”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="test_IDLffShape" name="test_IDLffShape.pro" stamp="1668669110923" updateReferences="true"/>
+</session>

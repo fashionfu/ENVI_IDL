@@ -1,0 +1,5434 @@
+;栅格和矢量，只能同时使用其中一个关键字。
+;2017年12月26日 -- [input_raster|input_vector]可以同时用，或只用某一个
+;                如果同时使用，则自动将矢量压缩到zip文件中
+;                如果仅input_raster，与之前无异
+;                如果仅input_vector，则压缩到zip中
+;
+PRO GSF_GetFileURL,                       $
+  input_raster=input_raster,              $ ;输入栅格，可以获取PngFileURL、MapExtent、 LegendPngURL、ZipFileURL
+  input_vector=input_vector,              $ ;输入矢量，主要是为了压缩文件，获取ZipFileURL
+  bands=bands,                            $ ;获取Png图片的波段组合，例如[0]、[2,1,0]
+  data_ignore_value=data_ignore_value,    $ ;忽略值
+  linear_stretch=linear_stretch,          $ ;如果设置此关键字，则进行线性拉伸
+  linear_percent=linear_percent,          $ ;线性拉伸百分比，默认为0.02，与linear_stretch搭配使用。
+  stretch_method=stretch_method,          $ ;拉伸方法，可选linear/root/log等，只作用于3波段快视图
+  raster_color_slice=raster_color_slice,  $ ;[密度分割时使用]设置此关键字表示要进行密度分割。
+  auto_percent_slice=auto_percent_slice,  $ ;[密度分割时使用]自动百分比拉伸获取范围，色彩更漂亮。可以使用linear_percent设置百分比，默认0.02
+  number_of_ranges=number_of_ranges,      $ ;[密度分割时使用]拉伸或不拉伸密度分割均可使用，分割的类别数，默认为5
+  color_table_name=color_table_name,      $ ;[密度分割时使用]颜色表，例如Rainbow
+  valid_data_range=valid_data_range,      $ ;[密度分割时使用]伪彩色显示时，控制有效范围，使图例一致
+  class_ranges=class_ranges,              $ ;[密度分割时使用]手动指定类别范围
+  class_colors=class_colors,              $ ;[密度分割时使用]手动指定类别颜色
+  reverse_color_table=reverse_color_table,$ ;[密度分割时使用]是否反转颜色表，默认为否
+  is_sar_image=is_sar_image,              $ ;输入图像是SAR时使用
+  is_mask_file=is_mask_file,              $ ;是否为掩膜文件，如果是，则返回红色PNG图像
+  map_type=map_type,                      $ ;可选项为'wgs84'/'map'/'web'，分别代表经纬度、地理坐标、Web墨卡托，默认经纬度
+  keep_pngfiles=keep_pngfiles,            $ ;设置此关键字为True，则输出PNG到C:\GSF22\help\thumbnails，从而避免自动清除
+  png_filename=png_filename,              $ ;设置PNG文件名，不包含路径
+  legend_unit=legend_unit,                $ ;当获取图例时此参数有效，可以设置为 'sheshidu'、'mg/m^3'、'NTU'、'mg/L'等
+  legend_major=legend_major,              $ ;手动控制图例主刻度个数
+  png_width=png_width,                    $ ;输出PNG快视图宽度，默认为860.0
+  thumbnail_width=thumbnail_width,        $ ;输出缩略图的宽度，默认256
+  export_pngw=export_pngw,                $ ;设置此关键字为True，缩略图和快视图均输出为pngw格式（pgw+aux.xml）
+  get_map_extent=get_map_extent,          $ ;设置此关键字为True，则out_options中将包含此信息【2个角点坐标】（MapExtent）
+  get_new_extent=get_new_extent,          $ ;设置此关键字为True，则out_options中将包含此信息【5个角点坐标】（MapExtent）[[x,y],[x,y],[x,y],[x,y],[x,y]]
+  get_gaode_extent=get_gaode_extent,      $ ;设置此关键字为True，则out_options中将包含此信息【2个角点坐标】（MapExtent）
+  get_four_coords=get_four_coords,        $ ;设置此关键字为True，则out_options中将包含此信息【4个角点坐标】（MapExtent）
+  get_pngfile_url=get_pngfile_url,        $ ;设置此关键字为True，则out_options中将包含此信息（PngFileURL）
+  get_thumbnail_url=get_thumbnail_url,    $ ;设置此关键字为True，则out_options中将包含缩略小图（ThumbnailURL）
+  get_legend_url=get_legend_url,          $ ;设置此关键字为True，则out_options中将包含此信息（LegendPngURL）
+  get_zipfile_url=get_zipfile_url,        $ ;设置此关键字为True，则out_options中将包含此信息（ZipFileURL）
+  output_dir=output_dir,                  $ ;设置导出zip、png图片的路径。如不设置，默认使用当前路径（即job文件夹）
+  out_options=out_options                   ;返回信息，HASH结构。
+
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+  ;获取当前路径
+  cd, current=curPath
+  jobdir = curPath
+
+  ;获取GSF服务器IP地址
+  GSF_GetGSFConfig, gsf_ip=gsf_ip, gsf_port=gsf_port, gsf_pngpath=gsf_pngpath, $
+    config_json_uri=config_json_uri, jobid=jobid
+
+  IF KEYWORD_SET(output_dir) THEN curPath=output_dir
+  pngPath = curPath
+
+  ;如果当前路径不包含workspace，则表示在IDL中调试
+  ;IF ~curPath.Contains('workspace') THEN keep_pngfiles=0
+
+  ;如果设置了输入栅格
+  IF KEYWORD_SET(input_raster) THEN BEGIN
+    e=ENVI(/HEADLESS)
+
+    input_file=(input_raster[0]).uri
+
+    fbasename = FILE_BASENAME(input_file)
+    FileFormat = STRMID(fbasename, STRPOS(fbasename, '.', /REVERSE_SEARCH))
+
+    ;忽略值默认为空
+    IF N_ELEMENTS(data_ignore_value) THEN $;data_ignore_value = !NULL
+      input_raster = e.OpenRaster(input_file, data_ignore_value=data_ignore_value)
+
+    ;重新打开文件
+    ; FOREACH element, input_raster DO element.Close
+    ; input_raster = e.OpenRaster(input_file, $
+    ;   data_ignore_value=data_ignore_value)
+
+    input_raster = input_raster[0]
+
+    ;判断文件类型
+    file_type = 'others'
+    IF input_raster.METADATA.hasTag('classes') THEN file_type = 'class'
+    IF input_raster.METADATA.hasTag('data ignore value') THEN data_ignore_value = input_raster.METADATA['data ignore value']
+    IF KEYWORD_SET(raster_color_slice) THEN file_type = 'class'
+    IF KEYWORD_SET(auto_percent_slice) THEN file_type = 'class'
+    IF KEYWORD_SET(is_mask_file) THEN file_type = 'mask'
+
+    ;获取PNG图片URL
+    IF KEYWORD_SET(get_pngfile_url) THEN BEGIN
+
+      ;如果设置此参数，则输出PNG到C:\GSF22\help\thumbnails\jobid，从而避免自动清除
+      IF KEYWORD_SET(keep_pngfiles) THEN BEGIN
+        pngPath = gsf_pngpath
+        jobid = FILE_BASENAME(curPath)
+      ENDIF
+
+      ;默认参数
+      IF ~N_ELEMENTS(linear_percent) THEN linear_percent=0.02
+
+      ;如果bands没有设置，根据nb设置默认值
+      IF ~N_ELEMENTS(bands) THEN BEGIN
+        CASE input_raster.nbands OF
+          1: bands = [0]
+          2: bands = [0]
+          3: bands = [0,1,2]
+          ELSE: BEGIN
+
+            ;如果有波长和波长单位，则自动识别红、绿、蓝
+            IF input_raster.METADATA.HasTag('WAVELENGTH UNITS') && $
+              input_raster.METADATA.HasTag('WAVELENGTH') THEN BEGIN
+              ;
+              wv_units = input_raster.METADATA['WAVELENGTH UNITS']
+              wv = input_raster.METADATA['WAVELENGTH']
+              IF wv_units.Contains('micromete',/fold_case) THEN wv*=1000
+
+              FOR i=0,input_raster.nbands-1 DO BEGIN
+                IF wv[i] GE 450 && wv[i] LT 510 THEN blue_idx=i
+                IF wv[i] GE 520 && wv[i] LT 600 THEN green_idx=i
+                IF wv[i] GE 600 && wv[i] LT 720 THEN red_idx=i
+              ENDFOR
+
+              bands = [red_idx,green_idx,blue_idx]
+              print, bands
+            ENDIF ELSE BEGIN
+              bands = [2,1,0]
+            ENDELSE
+          END
+        ENDCASE
+      ENDIF
+
+      ;波段裁剪
+      bandRaster = ENVISubsetRaster(input_raster, bands=bands)
+
+      IF ~KEYWORD_SET(png_width) THEN png_width=860.0D
+      ;尝试，测试保持原有分辨率
+      IF png_width EQ -1 THEN BEGIN
+        tmpNewRaster = bandRaster
+        GOTO, jump
+      ENDIF
+
+      ;缩放系数
+      factor = (input_raster.NCOLUMNS)/FLOAT(png_width)>1.0
+      ;获取数据，为了后边生成新的ENVIRaster，获取spatialref
+      resampleRaster = ENVIResampleRaster(bandRaster, pixel_scale=factor)
+
+      ;奇葩事件，对于Sentinel-2原始xml文件，需要用如下方法效率较高
+      IF input_raster.Metadata.HasTag('sensor type') && $
+        input_raster.Metadata['sensor type'] EQ 'Sentinel-2' && $
+        input_file.EndsWith('.xml',/fold_case) THEN BEGIN
+
+        data = resampleRaster.GetData(interleave = 'bip')
+
+      ENDIF ELSE BEGIN
+
+        ;其他数据使用如下方法获取数据
+        factor = float(png_width)/(input_raster.NCOLUMNS)<1 & IF factor EQ 1 THEN factor=!NULL
+        data = bandRaster.GetData(xfactor=factor, yfactor=factor, interleave='bip')
+      ENDELSE
+
+      ;新建栅格
+      tmpInterleave = N_ELEMENTS(bands) EQ 1 ? 'bsq':'bip'
+      tmpNewRaster = ENVIRaster(data, interleave=tmpInterleave, nbands=N_ELEMENTS(bands), $
+        data_ignore_value=data_ignore_value, INHERITS_from=input_raster, $
+        spatialref=resampleRaster.SPATIALREF)
+      tmpNewRaster.Save
+      resampleRaster.Close
+      bandRaster.Close
+
+      jump:
+      IF tmpNewRaster.SPATIALREF NE !NULL THEN BEGIN
+        ;2018年6月28日 14:18:04更新，转换为Web墨卡托坐标
+        tmpFid = ENVIRasterToFID(tmpNewRaster)
+        ;ENVI_OPEN_FILE, tmpNewRaster.URI, r_fid=tmpFid
+        ENVI_FILE_QUERY, tmpFid, dims=tmpDims, nb=tmpNB
+        tmpFile = e.GetTemporaryFilename()
+        o_proj = ENVI_PROJ_CREATE(pe_coord_sys_str='PROJCS["WGS_1984_Web_Mercator_Auxiliary_Sphere",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Mercator_Auxiliary_Sphere"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",0.0],PARAMETER["Standard_Parallel_1",0.0],PARAMETER["Auxiliary_Sphere_Type",0.0],UNIT["Meter",1.0]]', type=42)
+        ENVI_CONVERT_FILE_MAP_PROJECTION, fid=tmpFid, pos=LINDGEN(tmpNB), dims=tmpDims, $
+          o_proj=o_proj, resampling=0, warp_method=1, degree=1, out_name=tmpFile, $
+          background=data_ignore_value, r_fid=webFid, /zero_edge
+        newRaster = ENVIFIDToRaster(webFid)
+        ENVI_FILE_MNG, id=tmpFid, /remove, /delete
+        GSF_File_Delete_Enhanced, tmpNewRaster
+
+      ENDIF ELSE BEGIN
+        newRaster = tmpNewRaster
+      ENDELSE
+
+      ;如果设置了SARscape关键字，进行Square Root拉伸
+      IF KEYWORD_SET(is_sar_image) THEN BEGIN
+        tmp_newRaster = ENVIRootStretchRaster(newRaster, min=1, max=50000)
+        tmpFile = e.GetTemporaryFilename()
+        tmp_newRaster.Export, tmpFile, 'envi'
+        newRaster.Close
+        newRaster = tmp_newRaster
+      ENDIF
+
+      ;显示
+      ;如果设置了raster_color_slice，
+      IF KEYWORD_SET(raster_color_slice) THEN BEGIN
+
+        ;如果设置了有效范围，则做异常值处理
+        IF KEYWORD_SET(valid_data_range) THEN BEGIN
+          expression = 'b1>('+STRTRIM(valid_data_range[0],2)+')<('+STRTRIM(valid_data_range[1],2)+')'
+          newRaster = ENVIPixelwiseBandMathRaster(newRaster, expression)
+        ENDIF
+
+        ;如果有忽略值，可以修改为NaN，便不需要关心背景值了
+        IF N_ELEMENTS(data_ignore_value) THEN BEGIN
+          div_string = STRTRIM(data_ignore_value,2)
+          expression = 'b1*float(b1 ne '+div_string+')/(b1 ne '+div_string+')'
+          newRaster = ENVIPixelwiseBandMathRaster(newRaster, expression)
+        ENDIF
+
+        ;逆转颜色表
+        IF ~KEYWORD_SET(reverse_color_table) THEN reverse_color_table=0
+
+        ;对NDVI进行彩色显示
+        Task = ENVITASK('ColorSliceClassification')
+        Task.INPUT_RASTER = newRaster
+
+        IF KEYWORD_SET(auto_percent_slice) THEN BEGIN
+
+          ;拉伸密度分割时，默认为5，再加上最小、最大，一般会有7个类别
+          IF ~KEYWORD_SET(number_of_ranges) THEN number_of_ranges = 5.0
+
+          ;自动设定颜色表和分割范围，自动统计2%~98%像元范围，进行彩色显示
+          stats = ENVIRasterStatistics(newRaster, /HISTOGRAMS, HISTOGRAM_NBINS=2000)
+          hist = stats.HISTOGRAMS[0]
+          totalCounts = total(hist['counts'], /CUMULATIVE)
+          totalPercents = totalCounts/totalCounts[-1]
+
+          tmp = min(totalPercents-linear_percent, per02idx, /ABSOLUTE)
+          tmp = min(totalPercents-(1.0-linear_percent), per98idx, /ABSOLUTE)
+
+          sliceMin = hist['min']+per02idx*hist['binsize']
+          sliceMax = hist['min']+per98idx*hist['binsize']
+
+          tmp = [sliceMin:sliceMax:(sliceMax-sliceMin)/number_of_ranges]
+
+          ;如果2%的像元值不是最小值，或98%的像元值不是最大值，则添加一个色彩范围
+          IF per02idx NE 0 OR $
+            per98idx NE (hist['bincount']-1) THEN BEGIN
+
+            ;如果设置了有效范围，则取
+            IF KEYWORD_SET(valid_data_range) THEN BEGIN
+              min_value = hist['min'] < valid_data_range[0]
+              max_value = stats.MAX > valid_data_range[1]
+            ENDIF ELSE BEGIN
+              min_value = hist['min']
+              max_value = stats.MAX
+            ENDELSE
+
+            tmp1 = [min_value, tmp]
+            tmp2 = [tmp, max_value]
+          ENDIF ELSE BEGIN
+            tmp1 = tmp
+            tmp2 = tmp
+          ENDELSE
+
+          ;获取密度分割范围
+          Class_Ranges = TRANSPOSE([[tmp1],[tmp2]],[1,0])
+
+          IF N_ELEMENTS(ignoreFlag) THEN $
+            Class_Ranges = [[slice_ignore_value,slice_ignore_value],[Class_Ranges]]
+
+          n_Ranges = N_ELEMENTS(class_ranges)/2
+          ;
+          ;获取颜色表
+          CLASS_COLORS = COLORTABLE(color_table_name, ncolors=n_Ranges, $
+            /transpose, reverse=reverse_color_table)
+
+          IF N_ELEMENTS(ignoreFlag) THEN $
+            CLASS_COLORS[*,0] = [0,0,0]
+
+          Task.CLASS_COLORS = class_colors
+          Task.CLASS_RANGES = class_ranges
+        ENDIF ELSE BEGIN
+
+          ;没有指定类别颜色时，使用颜色表
+          IF ~KEYWORD_SET(class_ranges) THEN BEGIN
+            Task.REVERSE_COLOR_TABLE = reverse_color_table
+            Task.COLOR_TABLE_NAME = color_table_name
+          ENDIF
+
+          ;自动密度分割时，默认为6
+          IF ~KEYWORD_SET(number_of_ranges) THEN number_of_ranges = 7.0
+          IF ~KEYWORD_SET(class_ranges) THEN Task.NUMBER_OF_RANGES = number_of_ranges
+
+          ;支持手动指定分类颜色和范围
+          IF KEYWORD_SET(class_ranges) THEN BEGIN
+            ;如果只指定了范围，则自动获取颜色表
+            IF ~KEYWORD_SET(class_colors) THEN BEGIN
+              n_Ranges = N_ELEMENTS(class_ranges)/2
+              class_colors = COLORTABLE(color_table_name, ncolors=n_Ranges, $
+                /transpose, reverse=reverse_color_table)
+            ENDIF
+            Task.CLASS_COLORS = class_colors
+            Task.CLASS_RANGES = class_ranges
+          ENDIF
+        ENDELSE
+
+        ;如果进行了自动阈值分割，获取类别名
+        IF KEYWORD_SET(auto_percent_slice) THEN BEGIN
+          tmpStart = LONG64((Task.CLASS_RANGES)[0,*] * 100)/100.0
+          tmpEnd =  LONG64((Task.CLASS_RANGES)[1,*] * 100)/100.0
+
+          ;判断如果所有tmpStart和tmpEnd都是整型，则不保留小数点
+          IF ARRAY_EQUAL(tmpStart, LONG64(tmpStart)) AND $
+            ARRAY_EQUAL(tmpEnd, LONG64(tmpEnd)) THEN $
+            format_code = '(I20)' $
+          ELSE format_code = '(F20.2)'
+
+          startRanges = STRTRIM(STRING(tmpStart,format=format_code),2)
+          endRanges = STRTRIM(STRING(tmpEnd,format=format_code),2)
+
+          IF ARRAY_EQUAL(startRanges, endRanges) THEN $
+            class_names = ['Background', startRanges] $
+          ELSE class_names = ['Background', startRanges+'~'+endRanges]
+        ENDIF
+
+        Task.Execute
+        IF newRaster.uri NE tmpFile THEN BEGIN
+          tmpRaster=e.OpenRaster(tmpFile)
+          tmpRaster.Close
+        ENDIF
+        newRaster.Close, error=error
+        newRaster = task.OUTPUT_RASTER
+
+        IF KEYWORD_SET(auto_percent_slice) THEN BEGIN
+          newRaster.METADATA.UpdateItem, 'class names', class_names
+        ENDIF ELSE BEGIN
+          ;如果是自动密度分割，需要把类别名格式化一下，比如'6.294128 to 10.859583'，改为 6.29~10.86
+          class_names = newRaster.METADATA['CLASS NAMES']
+          n_classes = N_ELEMENTS(class_names)
+          FOR i=0, n_classes-1 DO BEGIN
+            class_name = class_names[i]
+            IF class_name.contains('to', /fold_case) THEN BEGIN
+              tmp_names = STRSPLIT(class_name, ' to ', /extract, count=tmp_count)
+              IF tmp_count EQ 2 THEN BEGIN
+                ;判断是否整型，是整型，则不保留小数点
+                tmp_names_double = double(tmp_names)
+                tmp_names_long64 = long64(tmp_names)
+                IF ARRAY_EQUAL(tmp_names_double, tmp_names_long64) THEN $
+                  format_code = '(I20)' $
+                ELSE format_code = '(F20.2)'
+
+                tmp_names = STRTRIM(STRING(tmp_names_double,format=format_code),2)
+                class_name = STRJOIN(tmp_names, '~')
+                class_names[i]=class_name
+              ENDIF
+            ENDIF
+          ENDFOR
+          newRaster.METADATA.UpdateItem, 'class names', class_names
+        ENDELSE
+      ENDIF
+
+      IF png_width NE -1 THEN BEGIN
+        ;再次重采样到所需宽度
+        needtodelete_newRaster = newRaster
+        factor = (newRaster.NCOLUMNS)/float(png_width)>1
+        newRaster = ENVIResampleRaster(needtodelete_newRaster, pixel_scale=factor)
+        tmp_file = e.GetTemporaryFilename()
+        newRaster.Export, tmp_file, 'envi' & newRaster.Close
+        newRaster = e.OpenRaster(tmp_file)
+        GSF_File_Delete_Enhanced, needtodelete_newRaster
+      ENDIF
+
+      ;重新获取数据
+      data = newRaster.GetData(interleave = 'bip', pixel_state=pixel_state)
+      dimensions = [newRaster.nColumns, newRaster.nRows]
+
+      ;判断图像是否为分类结果
+      CASE file_type OF
+        ;如果是分类结果
+        'class': BEGIN
+          rgb_table = newRaster.METADATA['class lookup']
+
+          ;;如果RGB_Table中有全部是0或255的，透明显示
+          zeroIdx = WHERE(TOTAL(rgb_table,1) EQ 0)
+          IF zeroIdx[0] NE -1 THEN BEGIN
+            FOREACH element, zeroIdx DO BEGIN
+              IF element EQ 0 THEN CONTINUE
+              data_zeroIdx = WHERE(Data EQ element)
+              Data[data_zeroIdx] = 0B
+            ENDFOREACH
+          ENDIF
+
+          ;如果类别名称中包含mask、unclassified等，则透明显示
+          class_names = newRaster.METADATA['class names']
+          zeroIdx = WHERE(class_names.Contains('Masked',/fold_case))
+          IF zeroIdx[0] NE -1 THEN BEGIN
+            rgb_table[*, zeroIdx] = 0B
+            data_zeroIdx = WHERE(Data EQ zeroIdx[0])
+            Data[data_zeroIdx] = 0B
+          ENDIF
+          zeroIdx = WHERE(class_names.Contains('Unclassified',/fold_case))
+          IF zeroIdx[0] NE -1 THEN BEGIN
+            rgb_table[*, zeroIdx]=0B
+            data_zeroIdx = WHERE(Data EQ zeroIdx[0])
+            Data[data_zeroIdx] = 0B
+          ENDIF
+
+          ;生成图例
+          IF KEYWORD_SET(get_legend_url) THEN BEGIN
+            LegendPngFileName = FILE_BASENAME(input_file, FileFormat)+'_legend.png'
+            LegendPngURL = FILEPATH(LegendPngFileName, root_dir=pngPath)
+            Get_Legend_PNG_URL, newRaster, LegendPngURL, legend_unit=legend_unit
+          ENDIF
+
+          ;  i=IMAGE(Data, /BUFFER, DIMENSIONS=DIMENSIONS, RGB_TABLE=rgb_table, $
+          ;    MARGIN=[0.,0.,0.,0.], /ORDER, ASPECT_RATIO=0)
+
+        END
+        ;如果是掩膜文件
+        'mask': BEGIN
+          rgb_table = [[0B,0B,0B],[255B,0B,0B]]
+          Data = BYTE(Data)
+          ;  i=IMAGE(BYTE(Data), /BUFFER, DIMENSIONS=DIMENSIONS, $
+          ;    MARGIN=[0.,0.,0.,0.], /ORDER, ASPECT_RATIO=0, $
+          ;    rgb_table=rgb_table)
+        END
+        ELSE: BEGIN
+
+          ;输入了有效范围，且进行了拉伸，则不添加大于等于、小于等于
+          IF ~KEYWORD_SET(valid_data_range) && KEYWORD_SET(linear_stretch) THEN add_lege=1
+
+          ;RGB彩色显示
+          ;如果进行拉伸
+          IF KEYWORD_SET(linear_stretch) THEN BEGIN
+            Data = GSF_StretchRaster(newRaster, stretch_method=stretch_method, $
+              percent=linear_percent, valid_data_range=valid_data_range)
+          ENDIF
+
+          IF N_ELEMENTS(bands) EQ 1 THEN BEGIN
+            ;如果是1个波段，data=[1,ns,nl]
+            Data = REFORM(Data)
+
+            ;将忽略值修改为NaN
+            ;'b1*float(b1 ne 250)/(b1 ne 250)'
+            IF N_ELEMENTS(data_ignore_value) && ~KEYWORD_SET(linear_stretch) THEN $
+              Data = Data*float(Data NE data_ignore_value)/(Data NE data_ignore_value)
+
+            ;2017年9月15日 11:46:23 如果是单波段图像，可以显示黑白或伪彩色
+            IF KEYWORD_SET(color_table_name) THEN BEGIN
+
+              ;获取有效区域的最大最小值
+              IF ~KEYWORD_SET(valid_data_range) THEN BEGIN
+                ; tmp_data = newRaster.GetData(interleave = 'bip', pixel_state=pixel_state)
+                stats = ENVIRasterStatistics(newRaster)
+                valid_data_range = [(stats['min'])[0], (stats['max'])[0]]
+              ENDIF
+
+              ;获取颜色表
+              RGB_TABLE = COLORTABLE(color_table_name, $
+                /transpose, reverse=reverse_color_table)
+
+              for_colorbar = RGB_TABLE
+
+              ;字节型拉伸后，NaN就变成了0，将颜色表第一个颜色修改为白色，可透明显示
+              IF N_ELEMENTS(data_ignore_value) THEN $
+                RGB_TABLE[*,0] = [0B,0B,0B]
+
+              ;如果假彩色显示，则可以获取图例
+              ;可以控制有效范围bytscl(Data,min=-1,max=1)
+              ;已经经过百分比拉伸，这里不再拉伸
+              IF ~KEYWORD_SET(linear_stretch) THEN BEGIN
+
+                ;2019年2月28日 15:13:09 更新
+                ;小于最小值且不等于忽略值的，修改为最小值
+                ;大于最大值且不等于忽略值的，修改为最大值
+                LTMinNeDIV_idx = WHERE(data LT valid_data_range[0] AND data NE data_ignore_value)
+                GTMaxNeDIV_idx = WHERE(data GT valid_data_range[1] AND data NE data_ignore_value)
+                IF LTMinNeDIV_idx[0] NE -1 THEN data[LTMinNeDIV_idx]=valid_data_range[0]
+                IF GTMaxNeDIV_idx[0] NE -1 THEN data[GTMaxNeDIV_idx]=valid_data_range[1]
+                EQminValid_idx = WHERE(data EQ valid_data_range[0]) ;记录等于最小有效值的索引，之后修改为1
+                ;忽略值修改为NaN
+                data = data*FLOAT(data NE data_ignore_value)/(data NE data_ignore_value)
+                ;记录有效值范围
+                not_nan_idx = WHERE(~FINITE(data, /nan))
+                data = BYTSCL(Data, min=valid_data_range[0], max=valid_data_range[1], /nan)
+                ;有效值必须大于等于1B
+                data[not_nan_idx] = data[not_nan_idx]>1B
+                ;IF EQminValid_idx[0] NE -1 THEN data[EQminValid_idx] = 1B
+              ENDIF
+
+
+              ;如果需要获取图例
+              IF KEYWORD_SET(get_legend_url) THEN BEGIN
+
+                ;2018年7月11日 09:22:12更新 添加单位
+                IF KEYWORD_SET(legend_unit) THEN BEGIN
+
+                  ;如果需要单位
+                  legend_dimensions = [120,260]
+                  colorbar_position = [0.06,0.115,0.26,0.965]
+                  unit_positon = [0.06,0.04]
+
+                  CASE STRUPCASE(legend_unit) OF
+                    'SHESHIDU': legend_unit = '^\circC'
+                    ELSE:
+                  ENDCASE
+                  legend_unit_text = '$'+legend_unit+'$' ;'Unit $'+legend_unit+'$'
+
+                ENDIF ELSE BEGIN
+                  legend_dimensions = [120,260]
+                  colorbar_position = [0.06,0.0355,0.26,0.965]
+                ENDELSE
+
+                cbWin = window(dimensions=legend_dimensions, /buffer)
+                cb = COLORBAR(position=colorbar_position, textpos=1, border=0, tickdir=1, subticklen=0, $
+                  rgb_table=for_colorbar, range=valid_data_range,  ticklayout=1, color=[55B,64B,79B], ticklen=0, $
+                  orientation=1, font_size=10, font_name = 'Microsoft Yahei', text_orientation=1e-5, major=legend_major)
+
+                ;2019年3月15日 11:59:40 更新 增加刻度数
+                cb_values=cb.TICKVALUES
+                ;diff_range = valid_data_range[1]-valid_data_range[0]
+                ;IF N_ELEMENTS(cb_values) LT 5 && diff_range LT 1 THEN BEGIN
+                ;  ;如果差值为0.01，则format_length=2
+                ;  format_length=0
+                ;  IF diff_range LT 1 THEN BEGIN
+                ;    REPEAT BEGIN
+                ;      diff_range*=10
+                ;      format_length++
+                ;    ENDREP UNTIL diff_range GT 10
+                ;  ENDIF
+                ;  format_length = format_length>1
+                ;  format_factor = 10.0^format_length
+                ;  range1 = (round(valid_data_range[0]*format_factor))/format_factor
+                ;  range2 = (round(valid_data_range[1]*format_factor))/format_factor
+                ;  formeted_range = float(string([range1,range2], format='(D10.'+STRTRIM(format_length,2)+')'))
+                ;  formated_cb_values = [(formeted_range[0]):(formeted_range[1]):(formeted_range[1]-formeted_range[0])/4.0]
+                ;  formated_cb_idx = WHERE(formated_cb_values GE valid_data_range[0] AND formated_cb_values LE valid_data_range[1])
+                ;  IF formated_cb_idx[0] NE -1 THEN formated_cb_values=formated_cb_values[formated_cb_idx]
+                ;  cb.TICKVALUES = formated_cb_values
+                ;ENDIF
+
+                ;mg/m^3 ^\circC
+                IF KEYWORD_SET(legend_unit) THEN $
+                  t=text(unit_positon[0],unit_positon[1], legend_unit_text, baseline=[100.0,1E-5,1E-5], $
+                  font_size=9.5, font_name = 'Microsoft Yahei', font_color=[55B,64B,79B])
+
+                ;如果设置了 linear_stretch，则设置最大和最小tickname为大于等于和小于等于
+                IF KEYWORD_SET(add_lege) THEN BEGIN
+                  cb_names = cb.TICKNAME & cb_values=cb.TICKVALUES & cb_onetick=ABS(cb_values[1]-cb_values[0])/10.0
+                  IF abs(valid_data_range[0]-cb_values[0]) LE cb_onetick THEN cb_names[0] = ' ';'$\le$' + cb_names[0]
+                  IF abs(valid_data_range[-1]-cb_values[-1]) LE cb_onetick THEN cb_names[-1] = ' ';'$\ge$' + cb_names[-1]
+                  cb.TICKNAME = cb_names
+                ENDIF
+
+                ;裁剪掉右侧空白区域
+                cb_data=cb.CopyWindow() & cb_dims=SIZE(cb_data, /dimensions) & cb.Close
+                cb_all255 = BYTARR(cb_dims[2])+255B
+                FOR i=cb_dims[1]-1,0,-1 DO BEGIN
+                  IF ~ARRAY_EQUAL(cb_data[0,i,*], cb_all255) || ~ARRAY_EQUAL(cb_data[1,i,*], cb_all255) || $
+                    ~ARRAY_EQUAL(cb_data[2,i,*], cb_all255) THEN BEGIN
+                    cb_width = (i+5)<(cb_dims[1]-1)
+                    BREAK
+                  ENDIF
+                ENDFOR
+
+                cb_data = cb_data[*,0:cb_width,*]
+
+                LegendPngFileName = FILE_BASENAME(input_file, FileFormat)+'_legend.png'
+                LegendPngURL = FILEPATH(LegendPngFileName, root_dir=pngPath)
+                ; cb.Save, LegendPngURL, width=cb_width
+                WRITE_PNG, LegendPngURL, cb_data
+              ENDIF
+
+            ENDIF ELSE BEGIN
+
+              ;灰度图像，如果是SARscape格式，则不替换0值
+              ;              IF ~KEYWORD_SET(is_sar_image) THEN BEGIN
+              ;                zeroIdx = WHERE(Data EQ 0, count)
+              ;                IF count GT 0 THEN Data[zeroIdx] = 255B
+              ;              ENDIF
+
+              i=IMAGE(Data, /BUFFER, DIMENSIONS=DIMENSIONS, $
+                MARGIN=[0.,0.,0.,0.], /ORDER, ASPECT_RATIO=0)
+            ENDELSE
+          ENDIF ELSE BEGIN
+
+            i=IMAGE(Data, /BUFFER, DIMENSIONS=DIMENSIONS, $
+              MARGIN=[0.,0.,0.,0.], /ORDER, ASPECT_RATIO=0)
+          ENDELSE
+
+        END
+      ENDCASE
+
+      TRANSPARENT=[0B,0B,0B]
+      PngFileName = KEYWORD_SET(png_filename) ? png_filename : FILE_BASENAME(input_file, FileFormat)+'.png'
+      PngFileURL = FILEPATH(PngFileName, root_dir=pngPath)
+
+      ;
+      IF TYPENAME(i) NE 'IMAGE' THEN BEGIN
+        ;如果是分类图或mask，直接写出png即可，不需要image窗口
+        WRITE_PNG, PngFileURL, Data, rgb_table[0,*], rgb_table[1,*], rgb_table[2,*], $
+          transparent=[0B], /order
+      ENDIF ELSE BEGIN
+        ;2018年5月25日 11:35:01 更新写出8位png图片，节省空间
+        i.Save, PngFileURL, TRANSPARENT=TRANSPARENT, WIDTH=DIMENSIONS[0],bit_depth=1
+        _newdata = READ_PNG(PngFileURL, r, g, b, transparent=tran)
+        _newdata = _newdata>1B<254B
+        !NULL = newRaster.GetData(bands=[0], pixel_state=pixel_state)
+        pixel_state = pixel_state EQ 0
+        pixel_state = ROTATE(pixel_state, 7)
+
+        ;2019年7月11日 10:00:52 更新
+        ;对于小图，pixel_state 和 _newdata 有可能维度不一样，需要判断
+        dims_newdata = SIZE(_newdata, /dimensions)
+        dims_pixel_state = SIZE(pixel_state, /dimensions)
+        IF ~ARRAY_EQUAL(dims_newdata, dims_pixel_state) THEN BEGIN
+          ;如果维度不一样，需要重采样
+          _newdata = CONGRID(_newdata, dims_pixel_state[0], dims_pixel_state[1])
+        ENDIF
+
+        WRITE_PNG, PngFileURL, pixel_state*_newdata, r, g, b, transparent=[tran]
+      ENDELSE
+
+      mapRaster = newRaster
+    ENDIF ELSE BEGIN
+      mapRaster = input_raster
+    ENDELSE
+
+    ;获取Web墨卡托坐标范围【2个角点坐标】
+    IF KEYWORD_SET(get_map_extent) || KEYWORD_SET(get_new_extent) || $
+      KEYWORD_SET(get_four_coords) || KEYWORD_SET(get_gaode_extent) THEN BEGIN
+
+      ;2个角点坐标
+      IF KEYWORD_SET(get_map_extent) THEN BEGIN
+        FileX = [0, mapRaster.NCOLUMNS-1]
+        FileY = [0, mapRaster.NROWS-1]
+      ENDIF
+
+      ;2个角点坐标，高德贴图方式，左下角和右上角坐标
+      IF KEYWORD_SET(get_gaode_extent) THEN BEGIN
+        FileX = [0, mapRaster.NCOLUMNS-1]
+        FileY = [mapRaster.NROWS-1,0]
+      ENDIF
+
+      ;4个角点坐标
+      IF KEYWORD_SET(get_four_coords) THEN BEGIN
+        ns = mapRaster.NCOLUMNS & nl = mapRaster.NROWS
+        FileX = [0, ns-1, ns-1, 0]
+        FileY = [nl-1, nl-1, 0, 0]
+      ENDIF
+
+      ;5个角点坐标，左上角开始，逆时针，闭合
+      IF KEYWORD_SET(get_new_extent) THEN BEGIN
+        ns = mapRaster.NCOLUMNS & nl = mapRaster.NROWS
+        FileX = [0, 0, ns-1, ns-1, 0]
+        FileY = [0, nl-1, nl-1, 0, 0]
+      ENDIF
+
+
+      ;文件坐标 转换为 地理坐标
+      spatialRef1 = mapRaster.SPATIALREF
+      IF spatialRef1 NE !NULL THEN BEGIN
+        spatialRef1.ConvertFileToMap, FileX, FileY, MapX, MapY
+
+        IF ~KEYWORD_SET(map_type) THEN map_type = 'wgs84'
+        CASE map_type OF
+          'map': BEGIN
+            outExtentX = MapX
+            outExtentY = MapY
+          END
+          'wgs84': BEGIN
+            ;地理坐标 转换为 经纬度
+            spatialRef1.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+            outExtentX = Lon
+            outExtentY = Lat
+          END
+          'web': BEGIN
+            ;地理坐标 转换为 经纬度
+            spatialRef1.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+            ;经纬度 转换为 Web墨卡托
+            WGS84_to_WebMercator, Lon=Lon, Lat=Lat, $
+              WebX=WebX, WebY=WebY
+            outExtentX = WebX
+            outExtentY = WebY
+          END
+          'mars': BEGIN
+            ;地理坐标 转换为 经纬度
+            spatialRef1.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+            ;经纬度 转换为火星
+            WGS84_to_Mars, Lon, Lat, out_lon=WebX, out_lat=WebY
+            outExtentX = WebX
+            outExtentY = WebY
+          END
+        ENDCASE
+
+        MapExtent = [[outExtentY[0], outExtentX[0]],[outExtentY[1], outExtentX[1]]]
+
+        IF KEYWORD_SET(get_gaode_extent) THEN $
+          MapExtent = [[outExtentX[0], outExtentY[0]],[outExtentX[1], outExtentY[1]]]
+
+        ;4个角点坐标
+        IF KEYWORD_SET(get_four_coords) THEN BEGIN
+          ;{X-LB:左下角X,Y-LB:左下角Y,X-RB:右下角X,Y-RB:右下角Y,X-RT:右上角X,Y-RT右上角Y，X-LT:左上角X,Y-LT:左上角Y}
+          MapExtent = ORDEREDHASH('X-LB',outExtentX[0],'Y-LB',outExtentY[0],$
+            'X-RB',outExtentX[1],'Y-RB',outExtentY[1],$
+            'X-RT',outExtentX[2],'Y-RT',outExtentY[2],$
+            'X-LT',outExtentX[3],'Y-LT',outExtentY[3])
+        ENDIF
+
+        ;5个角点坐标，左上角开始，逆时针，闭合
+        IF KEYWORD_SET(get_new_extent) THEN BEGIN
+          MapExtent = TRANSPOSE([[outExtentX],[outExtentY]])
+        ENDIF
+
+        ; WebX = WebX[SORT(WebX)] & WebX = STRING(WebX, FORMAT='(D20.9)')
+        ; WebY = WebY[SORT(WebY)] & WebY = STRING(WebY, FORMAT='(D20.9)')
+        ; ;xmin,ymin,xmax,ymax
+        ; MapExtent = STRCOMPRESS(STRJOIN([WebX[0], WebY[0], WebX[1], WebY[1]], ','), /REMOVE_ALL)
+      ENDIF
+    ENDIF
+    ;
+    ;    ;2018年4月25日 15:36:45更新，增加获取4个角点坐标功能
+    ;    ;{X-LB:左下角X,Y-LB:左下角Y,X-RB:右下角X,Y-RB:右下角Y,X-RT:右上角X,Y-RT右上角Y，X-LT:左上角X,Y-LT:左上角Y}
+    ;    IF KEYWORD_SET(get_four_coords) THEN BEGIN
+    ;      ;获取地理范围
+    ;      ;文件坐标
+    ;      ns = mapRaster.NCOLUMNS & nl = mapRaster.NROWS
+    ;      FileX = [0, ns, ns, 0]
+    ;      FileY = [nl, nl, 0, 0]
+    ;      ;文件坐标 转换为 地理坐标
+    ;      spatialRef1 = mapRaster.SPATIALREF
+    ;      IF spatialRef1 NE !NULL THEN BEGIN
+    ;        spatialRef1.ConvertFileToMap, FileX, FileY, MapX, MapY
+    ;
+    ;        IF ~KEYWORD_SET(map_type) THEN map_type = 'wgs84'
+    ;        CASE map_type OF
+    ;          'map': BEGIN
+    ;            outExtentX = MapX
+    ;            outExtentY = MapY
+    ;          END
+    ;          'wgs84': BEGIN
+    ;            ;地理坐标 转换为 经纬度
+    ;            spatialRef1.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+    ;            outExtentX = Lon
+    ;            outExtentY = Lat
+    ;          END
+    ;          'web': BEGIN
+    ;            ;地理坐标 转换为 经纬度
+    ;            spatialRef1.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+    ;            ;经纬度 转换为 Web墨卡托
+    ;            WGS84_to_WebMercator, Lon=Lon, Lat=Lat, $
+    ;              WebX=WebX, WebY=WebY
+    ;            outExtentX = WebX
+    ;            outExtentY = WebY
+    ;          END
+    ;        ENDCASE
+    ;
+    ;        ;{X-LB:左下角X,Y-LB:左下角Y,X-RB:右下角X,Y-RB:右下角Y,X-RT:右上角X,Y-RT右上角Y，X-LT:左上角X,Y-LT:左上角Y}
+    ;        MapExtent = ORDEREDHASH('X-LB',outExtentX[0],'Y-LB',outExtentY[0],$
+    ;          'X-RB',outExtentX[1],'Y-RB',outExtentY[1],$
+    ;          'X-RT',outExtentX[2],'Y-RT',outExtentY[2],$
+    ;          'X-LT',outExtentX[3],'Y-LT',outExtentY[3])
+    ;      ENDIF
+    ;    ENDIF
+  ENDIF
+
+  ;2018年1月11日 11:37:27 更新 当不获取zip文件url时，返回null
+  ZipFileURL = 'null'
+  ZipShpURL = 'null'
+
+  ;2018年4月27日 11:39:14 更新
+  ;可以同时获取栅格和矢量的压缩URL
+  IF KEYWORD_SET(get_zipfile_url) THEN BEGIN
+
+    ;如果输入了栅格
+    IF KEYWORD_SET(input_raster) THEN BEGIN
+      ;      ZipFiles = [input_raster.uri, input_raster.AUXILIARY_URI]
+      ;      ZipFiles = ZipFiles[Where(~ZipFiles.EndsWith('.enp',/fold_case))]
+      ;
+      ;      fname = FILE_BASENAME(input_raster.uri)
+      ;      zipFileName = FILE_BASENAME(fname, STRMID(fname, STRPOS(fname, '.', /REVERSE_SEARCH)))+$
+      ;        '.zip'
+      ;
+      ;      ZipFileURL = FILEPATH(zipFileName, root_dir=curPath)
+      ;      FILE_TAR, ZipFiles, ZipFileURL
+
+      ;更新压缩方法
+      input_file = input_raster.uri
+      input_raster.Close
+      GSF_ZipFileService, input_file=input_file,   $
+        output_path=curPath, zipfile_url=ZipFileURL
+      input_raster = e.OpenRaster(input_file)
+    ENDIF
+
+    IF KEYWORD_SET(input_vector) THEN BEGIN
+      ZipFiles = [input_vector.uri, input_vector.AUXILIARY_URI]
+      zipFileName = FILE_BASENAME(input_vector.uri,'.shp')+'_vector.zip'
+
+      ZipShpURL = FILEPATH(zipFileName, root_dir=curPath)
+      FILE_ZIP, ZipFiles, ZipShpURL
+
+      ;GSF_ZipFileService, input_file=input_vector.uri,   $
+      ;  output_path=curPath, zipfile_url=ZipShpURL
+    ENDIF
+  ENDIF
+
+  ;返回结果
+  IF ~KEYWORD_SET(out_options) THEN out_options = ORDEREDHASH()
+  IF KEYWORD_SET(get_map_extent) || KEYWORD_SET(get_new_extent) || $
+    KEYWORD_SET(get_four_coords) || KEYWORD_SET(get_gaode_extent) THEN $
+    out_options += ORDEREDHASH('MapExtent', MapExtent)
+
+  IF KEYWORD_SET(get_pngfile_url) THEN BEGIN
+
+    ;2019年4月8日 10:20:21 更新
+    ;增加支持pngw格式输出。需要输出pgw和aux.xml文件
+    IF KEYWORD_SET(export_pngw) THEN $
+      GSF_Export_to_PNGw, PngFileURL, newRaster, data_ignore_value=data_ignore_value, map_type='mars'
+
+    ;2019年3月13日 16:48:22 更新
+    ;如果设置了 get_thumbnail_url，则获取256*256的小图，并返回结果
+    IF KEYWORD_SET(get_thumbnail_url) THEN BEGIN
+
+      IF ~KEYWORD_SET(thumbnail_width) THEN thumbnail_width = 256
+      ;写出缩略小图
+      pngdata = READ_PNG(PngFileURL,r,g,b, transparent=tran)
+      thumbnail_pngfile = PngFileURL.Replace('.png','_thumbnail.png')
+      WRITE_PNG, thumbnail_pngfile, CONGRID(pngdata, thumbnail_width,thumbnail_width), r, g, b, transparent=tran
+
+      ;如果设置了 keep_pngfiles，则转换为URL
+      IF KEYWORD_SET(keep_pngfiles) THEN $
+        thumbnail_pngfile = 'http://'+gsf_ip+':'+gsf_port+'/help/thumbnails/'+jobid+'/'+FILE_BASENAME(thumbnail_pngfile)
+      out_options += ORDEREDHASH('ThumbnailURL', thumbnail_pngfile)
+    ENDIF
+
+    out_options += ORDEREDHASH('LocalPngFileURL', PngFileURL)
+
+    ;如果设置了 keep_pngfiles，则转换为URL
+    IF KEYWORD_SET(keep_pngfiles) THEN BEGIN
+      PngFileURL = 'http://'+gsf_ip+':'+gsf_port+'/help/thumbnails/'+jobid+'/'+FILE_BASENAME(PngFileURL)
+    ENDIF
+    out_options += ORDEREDHASH('PngFileURL', PngFileURL)
+  ENDIF
+  IF KEYWORD_SET(get_legend_url) THEN BEGIN
+    ;如果设置了 keep_pngfiles，则转换为URL
+    IF KEYWORD_SET(keep_pngfiles) THEN $
+      LegendPngURL = 'http://'+gsf_ip+':'+gsf_port+'/help/thumbnails/'+jobid+'/'+FILE_BASENAME(LegendPngURL)
+    out_options += ORDEREDHASH('LegendPngURL', LegendPngURL)
+  ENDIF
+  out_options += ORDEREDHASH('ZipFileURL', ZipFileURL)
+  out_options += ORDEREDHASH('ZipShpURL', ZipShpURL)
+
+  ;2018年5月3日 11:59:29 更新 杜会建，增加文件路径
+  IF KEYWORD_SET(INPUT_RASTER) THEN $
+    out_options += ORDEREDHASH('raster_uri', INPUT_RASTER.URI)
+
+  ;删除临时文件
+  IF N_ELEMENTS(newRaster) THEN newRaster.Close, error=error
+  IF N_ELEMENTS(tmpFile) THEN BEGIN
+    tmpfiles = FILE_SEARCH(FILE_DIRNAME(tmpFile),'*envitempfile*', count=count)
+    IF count GT 0 THEN FILE_DELETE, tmpfiles, /quiet, /allow_nonexistent
+  ENDIF
+
+  ;删除.idl文件路径
+  FILE_DELETE, jobdir+PATH_SEP()+'.idl', /recursive, /quiet, /allow_nonexistent
+  ;FILE_DELETE, jobdir+PATH_SEP()+'incremental', /recursive, /quiet, /allow_nonexistent
+  ;FILE_DELETE, jobdir+PATH_SEP()+'work', /recursive, /quiet, /allow_nonexistent
+END
+
+
+;返回5个角点坐标，左上角开始，逆时针，闭合
+FUNCTION GSF_GetMapExtent_from_LonLatRaster, lon_raster, lat_raster
+  COMPILE_OPT idl2
+
+  lon_stats = ENVIRasterStatistics(lon_raster)
+  lat_stats = ENVIRasterStatistics(lat_raster)
+  map_extent = [[lon_stats['MIN'], lat_stats['MAX']], $
+    [lon_stats['MIN'], lat_stats['MIN']], $
+    [lon_stats['MAX'], lat_stats['MIN']], $
+    [lon_stats['MAX'], lat_stats['MAX']], $
+    [lon_stats['MIN'], lat_stats['MAX']]]
+
+  RETURN, map_extent
+END
+
+
+
+;转换为PNGW格式
+PRO GSF_Export_to_PNGw, png_file, raster, $
+  data_ignore_value=data_ignore_value,    $
+  map_type = map_type
+
+  COMPILE_OPT idl2
+
+  ;转换为经纬度坐标系，获取分辨率
+  ;  coordsys = ENVICoordSys(coord_sys_code=4326)
+  ;  wgs84raster = ENVIReprojectRaster(raster, coord_sys=coordsys)
+  ;  ref = wgs84raster.SPATIALREF
+  ;  ps = ref.PIXEL_SIZE  ;分辨率
+
+  ;分辨率手动计算
+  FileX = [0, raster.nColumns-1]
+  FileY = [0, raster.nRows-1]
+
+  ref = raster.SPATIALREF
+  ref.ConvertFileToMap, FileX, FileY, MapX, MapY
+  ref.ConvertMapToLonLat, MapX, MapY, Lon, Lat
+
+  ;经纬度 转换为火星
+  WGS84_to_Mars, Lon, Lat, out_lon=MarsX, out_lat=MarsY
+
+  ;计算分辨率
+  psX = (MarsX[1]-MarsX[0])/raster.nColumns
+  psY = (MarsY[1]-MarsY[0])/raster.nRows
+
+  IF ~KEYWORD_SET(map_type) THEN map_type = 'wgs84'
+  CASE map_type OF
+    'map': BEGIN
+      ;经纬度转化为地理坐标
+      ;ref.ConvertLonLatToMap, Lon, Lat, MapX, MapY
+      outX = MapX[0]
+      outY = MapY[0]
+    END
+    'wgs84': BEGIN
+      ;地理坐标 转换为 经纬度
+      outX = Lon[0]
+      outY = Lat[0]
+    END
+    'web': BEGIN
+      ;经纬度 转换为 Web墨卡托
+      WGS84_to_WebMercator, Lon=Lon, Lat=Lat, WebX=WebX, WebY=WebY
+      outX = WebX[0]
+      outY = WebY[0]
+    END
+    'mars': BEGIN
+      ;经纬度 转换为火星
+      WGS84_to_Mars, Lon, Lat, out_lon=WebX, out_lat=WebY
+      outX = WebX[0]
+      outY = WebY[0]
+    END
+  ENDCASE
+
+  ;写出pgw文件
+  pgw_file = png_file.Replace('.png','.pgw',/fold_case)
+  OPENW,lun,pgw_file,/get_lun
+  pgw_data = [psX,0,0,psY,outX,outY]
+  pgw_data = STRTRIM(STRING(pgw_data, format='(1F20.8-)'),2)
+  PRINTF,lun,pgw_data, format='(1A)'
+  FREE_LUN,lun
+
+  ;写出aux.xml文件
+  aux_file = png_file.Replace('.png','.aux.xml',/fold_case)
+  aux_data = ['<PAMDataset>', $
+    ' <SRS>GEOGCS["GCS_WGS_1984",DATUM["WGS_1984",SPHEROID["WGS_84",6378137.0,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0.0,AUTHORITY["EPSG","8901"]],UNIT["Degree",0.0174532925199433,AUTHORITY["EPSG","9102"]],AUTHORITY["EPSG","4326"]]</SRS>',$
+    '  <Metadata>',$
+    '    <MDI key="DataType">Generic</MDI>',$
+    '  </Metadata>',$
+    '  <PAMRasterBand band="1">',$
+    '    <NoDataValue>'+STRTRIM(data_ignore_value,2)+'</NoDataValue>',$
+    '    <Metadata>',$
+    '      <MDI key="SourceBandIndex">0</MDI>',$
+    '    </Metadata>',$
+    '  </PAMRasterBand>',$
+    '</PAMDataset>']
+
+  OPENW,lun,aux_file,/get_lun,width='1000'
+  PRINTF,lun,aux_data, format='(1A)'
+  FREE_LUN,lun
+END
+
+
+PRO GSF_Convert_to_S3URL, out_options
+  ;2019年3月20日 15:36:07 更新 转义为S3路径
+  COMPILE_OPT idl2
+  cd, current=jobdir
+  ;
+  ;config_json_uri = 'C:\Users\duhuijian\Desktop\config.json'
+  GSF_GetGSFConfig, gsf_ip=gsf_ip, gsf_port=gsf_port, $
+    config_json_uri=config_json_uri, jobid=jobid
+
+  IF ~N_ELEMENTS(config_json_uri) THEN RETURN
+
+  keys = (out_options.Keys()).toArray()
+  config_hash = JSON_PARSE(config_json_uri)
+  workspaceManager_hash = config_hash['workspaceManager']
+
+  IF STRMATCH(workspaceManager_hash['type'],'gsf-amazon-s3-workspace-manager',/fold_case) THEN BEGIN
+    S3Bucket = workspaceManager_hash['S3Bucket'] ;obs-map-zn-enterprise
+    endpoint = workspaceManager_hash['endpoint'] ;obs.cn-north-1.myhuaweicloud.com
+    S3Root = workspaceManager_hash.HasKey('S3Root') ? workspaceManager_hash['S3Root'] : 'workspace'
+
+    ;https://S3Bucket.endpoint/S3Root/foldername/filebasename
+    url_idx = WHERE(keys.EndsWith('URL',/fold_case))
+    url_keys = keys[url_idx]
+    FOREACH element, url_keys DO BEGIN
+      old_url = out_options[element]
+
+      IF old_url EQ 'nullresult' THEN CONTINUE
+
+      ;如果文件在job文件夹内，则会自动上传到S3，需要转换为S3路径
+      IF ~old_url.StartsWith(jobdir, /fold_case) THEN CONTINUE
+
+      jobid_pos = STRPOS(old_url, PATH_SEP()+jobid+PATH_SEP())
+      lastpart_url = STRMID(old_url, jobid_pos+STRLEN(jobid)+1)
+      lastpart_url = lastpart_url.Replace('\','/')
+      ;组成新的url
+      new_url = 'https://'+S3Bucket+'.'+endpoint+'/'+S3Root+'/'+jobid+lastpart_url
+      out_options[element] = new_url
+    ENDFOREACH
+  ENDIF
+END
+
+
+;拉伸函数，输入raster只能是单波段或三波段栅格
+;percent输入百分比，默认为0.02
+;返回值为拉伸后数组
+FUNCTION GSF_RasterStretch2Array, raster, percent=percent, $
+  valid_data_range=valid_data_range
+
+  COMPILE_OPT idl2
+
+  nb = raster.NBANDS
+
+  ;有忽略值时，掩膜背景值
+  IF raster.Metadata.HasTag('data ignore value') THEN $
+    do_mask=1 ELSE do_mask=0
+  ;
+  ;波段裁剪，制作掩膜文件【单波段不处理】
+  ;  IF do_mask THEN BEGIN
+  ;    band1raster = ENVISubsetRaster(raster, BANDS=[0])
+  ;    band1raster.METADATA.removeItem,'data ignore value', error=err
+  ;    div_string = STRTRIM(FLOAT(raster.Metadata['data ignore value']),2)
+  ;    maskRaster = ENVIPixelwiseBandMathRaster(band1raster, 'b1 ne '+div_string)
+  ;    ;    maskRaster.export, 'D:\temp\mask.dat','envi'
+  ;    ;    div = raster.Metadata['data ignore value']
+  ;    ;    maskraster=ENVIDataValuesMaskRaster(band1raster, [div,div],/inverse)
+  ;  ENDIF
+
+  ;percent默认为0.02
+  IF ~N_ELEMENTS(percent) THEN percent=0.02
+
+  ;获取波段数，如果不为1或3，则返回空
+  IF nb NE 1 AND nb NE 3 THEN RETURN, !NULL
+
+  ;初始化字节型数组，用于存储拉伸后结果
+  result = BYTARR(nb, raster.NCOLUMNS, raster.NROWS)
+
+  ;循环获取每个波段拉伸结果，存储在result中
+  FOR i=0,nb-1 DO BEGIN
+
+    subRaster = ENVISubsetRaster(raster, BANDS=[i])
+
+    ;根据置信区间统计 minValue和maxValue，
+    ;可用于植被覆盖度计算（对应NDVImin和NDVImax）
+    ;当统计结果不理想时，说明异常值较多，
+    ;可以设置HISTOGRAM_NBINS=1000，或更大的值
+    ;这里使用了ENVI接口进行直方图统计，
+    ;也可以换成IDL的HISTOGRAM函数，用法查看帮助
+    stats = ENVIRasterStatistics(subRaster, /HISTOGRAMS, $
+      HISTOGRAM_NBINS=1000)
+    ;统计直方图，获取累计像元个数
+    hist = stats.HISTOGRAMS[0]
+    totalCounts = TOTAL(hist['counts'], /CUMULATIVE)
+    ;获取累积百分比
+    totalPercents = totalCounts/totalCounts[-1]
+
+    ;获取置信区间的索引
+    tmp = MIN(totalPercents-percent, beginIndex, /ABSOLUTE)
+    tmp = MIN(totalPercents-(1.0-percent), endIndex, /ABSOLUTE)
+
+    ;根据索引计算置信区间最小和最大值
+    minValue = hist['min']+beginIndex*hist['binsize']
+    maxValue = hist['min']+endIndex*hist['binsize']
+    print, minvalue, maxvalue
+
+    ;在处理波段1时，生成掩膜栅格
+    IF i EQ 0 && do_mask THEN BEGIN
+      data = subRaster.GetData(pixel_state=pixel_state)
+      mask_data = pixel_state EQ 0
+      ;      mask_raster = ENVIRaster(mask_data)
+      ;      mask_raster.Save
+    ENDIF ELSE BEGIN
+      data = subRaster.GetData()
+    ENDELSE
+
+    data = BYTSCL(data, MIN=minValue, MAX=maxValue)
+
+    IF ~KEYWORD_SET(valid_data_range) THEN valid_data_range = [minValue, maxValue]
+
+    ;去除黑洞
+    IF do_mask THEN BEGIN
+      data = data>10B<240B ;去除黑洞
+      data = data*mask_data
+    ENDIF
+
+    result[i,*,*] = data
+  ENDFOR
+
+  ;  linear_raster = ENVILinearPercentStretchRaster(raster, percent=percent*100)
+  ;  result = linear_raster.GetData(interleave='bip')
+
+  ;  IF do_mask THEN BEGIN
+  ;    result = result>10B<240B ;去除黑洞
+  ;    IF nb EQ 1 THEN result=REFORM(result)
+  ;    tmp_raster = ENVIRaster(result, INHERITS_from=raster)
+  ;    tmp_raster.Save
+  ;    masked_raster = ENVIMaskRaster(tmp_raster, mask_raster)
+  ;
+  ;    result = masked_raster.GetData(interleave='bip')
+  ;    masked_raster.Close
+  ;
+  ;    ;删除临时栅格和矢量
+  ;    GSF_File_Delete_Enhanced, [tmp_raster, mask_raster]
+  ;  ENDIF
+
+  ;返回结果
+  RETURN, result
+END
+
+
+
+;拉伸函数，输入raster只能是单波段或三波段栅格
+;percent输入百分比，默认为0.02
+;返回值为拉伸后数组
+FUNCTION GSF_LinearPercentStretch, raster, percent=percent, $
+  valid_data_range=valid_data_range
+
+  COMPILE_OPT idl2
+
+  nb = raster.NBANDS
+
+  ;有忽略值时，掩膜背景值
+  IF raster.Metadata.HasTag('data ignore value') THEN $
+    do_mask=1 ELSE do_mask=0
+  ;
+  ;波段裁剪，制作掩膜文件【单波段不处理】
+  ;  IF do_mask THEN BEGIN
+  ;    band1raster = ENVISubsetRaster(raster, BANDS=[0])
+  ;    band1raster.METADATA.removeItem,'data ignore value', error=err
+  ;    div_string = STRTRIM(FLOAT(raster.Metadata['data ignore value']),2)
+  ;    maskRaster = ENVIPixelwiseBandMathRaster(band1raster, 'b1 ne '+div_string)
+  ;    ;    maskRaster.export, 'D:\temp\mask.dat','envi'
+  ;    ;    div = raster.Metadata['data ignore value']
+  ;    ;    maskraster=ENVIDataValuesMaskRaster(band1raster, [div,div],/inverse)
+  ;  ENDIF
+
+  ;percent默认为0.02
+  IF ~N_ELEMENTS(percent) THEN percent=0.02
+
+  ;获取波段数，如果不为1或3，则返回空
+  IF nb NE 1 AND nb NE 3 THEN RETURN, !NULL
+
+  ;初始化字节型数组，用于存储拉伸后结果
+  result = BYTARR(nb, raster.NCOLUMNS, raster.NROWS)
+
+  ;循环获取每个波段拉伸结果，存储在result中
+  FOR i=0,nb-1 DO BEGIN
+
+    subRaster = ENVISubsetRaster(raster, BANDS=[i])
+
+    ;根据置信区间统计 minValue和maxValue，
+    ;可用于植被覆盖度计算（对应NDVImin和NDVImax）
+    ;当统计结果不理想时，说明异常值较多，
+    ;可以设置HISTOGRAM_NBINS=1000，或更大的值
+    ;这里使用了ENVI接口进行直方图统计，
+    ;也可以换成IDL的HISTOGRAM函数，用法查看帮助
+    stats = ENVIRasterStatistics(subRaster, /HISTOGRAMS, $
+      HISTOGRAM_NBINS=1000)
+    ;统计直方图，获取累计像元个数
+    hist = stats.HISTOGRAMS[0]
+    totalCounts = TOTAL(hist['counts'], /CUMULATIVE)
+    ;获取累积百分比
+    totalPercents = totalCounts/totalCounts[-1]
+
+    ;获取置信区间的索引
+    tmp = MIN(totalPercents-percent, beginIndex, /ABSOLUTE)
+    tmp = MIN(totalPercents-(1.0-percent), endIndex, /ABSOLUTE)
+
+    ;根据索引计算置信区间最小和最大值
+    minValue = hist['min']+beginIndex*hist['binsize']
+    maxValue = hist['min']+endIndex*hist['binsize']
+    print, minvalue, maxvalue
+
+    ;在处理波段1时，生成掩膜栅格
+    IF i EQ 0 && do_mask THEN BEGIN
+      data = subRaster.GetData(pixel_state=pixel_state)
+      mask_data = pixel_state EQ 0
+      ;      mask_raster = ENVIRaster(mask_data)
+      ;      mask_raster.Save
+    ENDIF ELSE BEGIN
+      data = subRaster.GetData()
+    ENDELSE
+
+    data = BYTSCL(data, MIN=minValue, MAX=maxValue)
+
+    IF ~KEYWORD_SET(valid_data_range) THEN valid_data_range = [minValue, maxValue]
+
+    ;去除黑洞
+    IF do_mask THEN BEGIN
+      data = data>10B<240B ;去除黑洞
+      data = data*mask_data
+    ENDIF
+
+    result[i,*,*] = data
+  ENDFOR
+
+  ;  linear_raster = ENVILinearPercentStretchRaster(raster, percent=percent*100)
+  ;  result = linear_raster.GetData(interleave='bip')
+
+  ;  IF do_mask THEN BEGIN
+  ;    result = result>10B<240B ;去除黑洞
+  ;    IF nb EQ 1 THEN result=REFORM(result)
+  ;    tmp_raster = ENVIRaster(result, INHERITS_from=raster)
+  ;    tmp_raster.Save
+  ;    masked_raster = ENVIMaskRaster(tmp_raster, mask_raster)
+  ;
+  ;    result = masked_raster.GetData(interleave='bip')
+  ;    masked_raster.Close
+  ;
+  ;    ;删除临时栅格和矢量
+  ;    GSF_File_Delete_Enhanced, [tmp_raster, mask_raster]
+  ;  ENDIF
+
+  ;返回结果
+  RETURN, result
+END
+
+
+FUNCTION GSF_GetMinMaxValue_from_Raster, raster, percent=percent
+
+  COMPILE_OPT idl2
+
+  IF ~KEYWORD_SET(percent) THEN percent=0.02
+
+  stats = ENVIRasterStatistics(raster, /histograms, histogram_nbins=1000)
+
+  minmax_values = DBLARR(2, raster.nBands)
+
+  FOR i=0, raster.nBands-1 DO BEGIN
+    ;统计直方图，获取累计像元个数
+    hist = stats.HISTOGRAMS[i]
+    totalCounts = TOTAL(hist['counts'], /cumulative)
+    ;获取累积百分比
+    totalPercents = totalCounts/totalCounts[-1]
+
+    ;获取置信区间的索引
+    tmp = MIN(totalPercents-percent, beginIndex, /ABSOLUTE)
+    tmp = MIN(totalPercents-(1.0-percent), endIndex, /ABSOLUTE)
+
+    ;根据索引计算置信区间最小和最大值
+    minValue = hist['min']+beginIndex*hist['binsize']
+    maxValue = hist['min']+endIndex*hist['binsize']
+
+    minmax_values[0,i]=minValue
+    minmax_values[1,i]=maxValue
+  ENDFOR
+
+  RETURN, minmax_values
+END
+
+
+FUNCTION GSF_GetMinMaxValue_from_Array, arr, percent=percent
+
+  COMPILE_OPT idl2
+
+  IF ~KEYWORD_SET(percent) THEN percent=0.02
+
+  stats = HISTOGRAM(arr, nbins=1000, omin=omin, omax=omax)
+  binsize = (omax-omin)/1000
+
+  ;统计直方图，获取累计像元个数
+  totalCounts = TOTAL(stats, /cumulative)
+  ;获取累积百分比
+  totalPercents = totalCounts/totalCounts[-1]
+
+  ;获取置信区间的索引
+  tmp = MIN(totalPercents-percent, beginIndex, /ABSOLUTE)
+  tmp = MIN(totalPercents-(1.0-percent), endIndex, /ABSOLUTE)
+
+  ;根据索引计算置信区间最小和最大值
+  minValue = omin + beginIndex*binsize
+  maxValue = omin + endIndex*binsize
+
+  RETURN, [minValue,maxValue]
+END
+
+;拉伸函数，输入raster只能是单波段或三波段栅格
+;percent输入百分比，默认为0.02
+;默认返回值为拉伸后数组，可选返回栅格
+FUNCTION GSF_StretchRaster, raster, percent=percent, stretch_method=stretch_method, $
+  valid_data_range=valid_data_range, return_raster=return_raster, $
+  output_file=output_file, output_format=output_format
+
+  COMPILE_OPT idl2
+  nb = raster.NBANDS
+
+  ;有忽略值时，掩膜背景值
+  IF raster.Metadata.HasTag('data ignore value') THEN $
+    do_mask=1 ELSE do_mask=0
+
+  ;percent默认为0.02
+  IF ~N_ELEMENTS(percent) THEN percent=0.02
+  IF ~KEYWORD_SET(output_format) THEN output_format='envi'
+
+  ;如果数据行列数太大，则重采样
+  ;IF raster.NCOLUMNS GT 1280 THEN BEGIN
+  ;factor = (raster.NCOLUMNS)/1280.0>1.0
+  ;获取数据，为了后边生成新的ENVIRaster，获取spatialref
+  ;resampleRaster = ENVIResampleRaster(raster, pixel_scale=factor)
+  ;ENDIF ELSE BEGIN
+  resampleRaster = raster
+  ;ENDELSE
+
+  minvalues=!NULL & maxvalues=!NULL
+
+  ;循环获取每个波段拉伸结果，存储在result中
+  FOR i=0,nb-1 DO BEGIN
+
+    subRaster = ENVISubsetRaster(resampleRaster, BANDS=[i])
+
+    IF i EQ 0 && do_mask THEN BEGIN
+      !NULL = subRaster.GetData(pixel_state=pixel_state)
+      mask_data = pixel_state EQ 0
+      IF KEYWORD_SET(return_raster) THEN BEGIN
+        mask_raster = ENVIRaster(mask_data)
+        mask_raster.save
+      ENDIF
+    ENDIF
+
+    ;根据置信区间统计 minValue和maxValue，
+    ;可用于植被覆盖度计算（对应NDVImin和NDVImax）
+    ;当统计结果不理想时，说明异常值较多，
+    ;可以设置HISTOGRAM_NBINS=1000，或更大的值
+    ;这里使用了ENVI接口进行直方图统计，
+    ;也可以换成IDL的HISTOGRAM函数，用法查看帮助
+    stats = ENVIRasterStatistics(subRaster, /HISTOGRAMS, $
+      HISTOGRAM_NBINS=1000)
+    ;统计直方图，获取累计像元个数
+    hist = stats.HISTOGRAMS[0]
+    totalCounts = TOTAL(hist['counts'], /CUMULATIVE)
+    ;获取累积百分比
+    totalPercents = totalCounts/totalCounts[-1]
+
+    ;获取置信区间的索引
+    tmp = MIN(totalPercents-percent, beginIndex, /ABSOLUTE)
+    tmp = MIN(totalPercents-(1.0-percent), endIndex, /ABSOLUTE)
+
+    ;根据索引计算置信区间最小和最大值
+    minValue = hist['min']+beginIndex*hist['binsize']
+    maxValue = hist['min']+endIndex*hist['binsize']
+    print, minvalue, maxvalue
+
+    IF i EQ 0 && ~KEYWORD_SET(valid_data_range) THEN valid_data_range = [minValue, maxValue]
+
+    minvalues = [minvalues, minvalue]
+    maxvalues = [maxvalues, maxvalue]
+  ENDFOR
+
+  IF ~KEYWORD_SET(stretch_method) THEN stretch_method='linear'
+  CASE stretch_method OF
+    'linear': stretched_raster = ENVILinearRangeStretchRaster(resampleRaster, min=minvalues, max=maxvalues)
+    'root': BEGIN
+      stretched_raster = ENVIRootStretchRaster(resampleRaster, min=minvalues, max=maxvalues)
+      stretched_raster = ENVILinearPercentStretchRaster(stretched_raster, percent=0.02)
+    END
+    'log': BEGIN
+      stretched_raster = ENVILogStretchRaster(resampleRaster, min=minvalues, max=maxvalues)
+      stretched_raster = ENVILinearPercentStretchRaster(stretched_raster, percent=0.02)
+    END
+  ENDCASE
+
+  ;如果输出数组
+  IF ~KEYWORD_SET(return_raster) THEN BEGIN
+    ;
+    stretched_data = stretched_raster.GetData(interleave='BIP')
+
+    ;掩膜
+    IF do_mask THEN BEGIN
+      full_mask_data = BYTARR(nb, resampleRaster.nColumns, resampleRaster.nRows)
+      FOR i=0,nb-1 DO full_mask_data[i,*,*] = mask_data
+
+      ;去除空洞
+      stretched_data = stretched_data>10B<240B
+      stretched_data *= full_mask_data
+    ENDIF
+
+    RETURN, stretched_data
+  ENDIF
+
+  ;去除空洞
+  IF do_mask THEN BEGIN
+    tmp_ls_raster = ENVIMetaspectralRaster([stretched_raster,mask_raster])
+    tmp_bandrasters = !NULL
+    FOR i=0, nb-1 DO BEGIN
+      tmp_exp = 'byte((b'+STRTRIM(i+1,2)+'>1<254)*b'+STRTRIM(nb+1,2)+')'
+      tmp_bandrasters = [tmp_bandrasters, ENVIPixelwiseBandMathRaster(tmp_ls_raster, tmp_exp)]
+    ENDFOR
+
+    stretched_raster = ENVIMetaspectralRaster(tmp_bandrasters)
+  ENDIF
+
+  ;如果输出文件
+  IF KEYWORD_SET(output_file) THEN BEGIN
+    GSF_File_Delete_Enhanced, output_file
+    stretched_raster.Export, output_file, output_format, data_ignore_value=0
+    stretched_raster.Close
+    stretched_raster = ENVIURLRaster(output_file)
+  ENDIF
+
+  GSF_File_Delete_Enhanced, mask_raster
+
+  RETURN, stretched_raster
+END
+
+
+;+
+;Web墨卡托转换为经纬度
+; :Keywords:
+;     WebX            -- 输入需要转换的Web墨卡托X坐标数组
+;     WebY            -- 输入需要转换的Web墨卡托Y坐标数组
+;     Lon             -- 用于存储转换后的经度数组
+;     Lat             -- 用于存储转换后的纬度数组
+;-
+PRO WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+  ;
+  ;如果输入的为经纬度，则不进行转换
+  IF WebX[0] GE -180 AND WebX[0] LE 180 THEN BEGIN
+    Lon=WebX
+    Lat=WebY
+    RETURN
+  ENDIF
+  ;
+  ;计算经度坐标
+  IF ARG_PRESENT(Lon) && KEYWORD_SET(WebX) THEN $
+    Lon = WebX*180D/20037508.34D
+
+  ;计算纬度坐标
+  IF ARG_PRESENT(Lat) && KEYWORD_SET(WebY) THEN BEGIN
+    Lat = WebY*180D/20037508.34D
+    Lat = 180D/!PI*(2*ATAN(EXP(Lat*!PI/180D))-!PI/2)
+  ENDIF
+END
+
+;+
+;经纬度转换为Web墨卡托
+; :Keywords:
+;     Lon            -- 输入需要转换的经度数组
+;     Lat            -- 输入需要转换的纬度数组
+;     WebX           -- 用于存储转换后的Web墨卡托X坐标数组
+;     WebY           -- 用于存储转换后的Web墨卡托Y坐标数组
+;-
+PRO WGS84_to_WebMercator, Lon=Lon, Lat=Lat, WebX=WebX, WebY=WebY
+
+  ;计算Web Mercator X坐标
+  IF KEYWORD_SET(Lon) && ARG_PRESENT(WebX) THEN BEGIN
+    WebX = (Lon/180.0D)*20037508.34D
+    WebX = ROUND(WebX*100, /L64)/100.0D
+  ENDIF
+
+  ;计算Web Mercator Y坐标
+  IF KEYWORD_SET(Lat) && ARG_PRESENT(WebY) THEN BEGIN
+    WebY=DBLARR(N_ELEMENTS(Lat))
+    FOR i=0,N_ELEMENTS(Lat)-1 DO BEGIN
+      IF Lat[i] GT 85.05112D THEN BEGIN
+        WebY[i] = 85.05112D
+      ENDIF ELSE IF Lat[i] LT -85.05112D THEN BEGIN
+        WebY[i] = -85.05112D
+      ENDIF ELSE BEGIN
+        WebY[i] = ALOG(TAN((90.0D + Lat[i])*!PI/360D))/(!PI/180D)
+        WebY[i] = WebY[i]*20037508.34D/180D
+      ENDELSE
+    ENDFOR
+    WebY = ROUND(WebY*100, /L64)/100.0D
+  ENDIF
+END
+
+
+;获取图例
+PRO Get_Legend_PNG_URL, Raster, LegendPngURL, legend_unit=legend_unit
+  COMPILE_OPT idl2
+  e=envi(/current)
+
+  nclasses = Raster.METADATA['classes']
+  class_names = Raster.METADATA['class names']
+  rgb_table = Raster.METADATA['class lookup']
+  normalIdx = WHERE((TOTAL(rgb_table,1) NE 0 AND TOTAL(rgb_table,1) NE 765.0) $
+    AND ~class_names.Contains('Masked',/fold_case) $
+    AND ~class_names.Contains('Unclassified',/fold_case))
+  ;  0   0   0
+  ;  0   0   0
+  ;  0   0 255
+  ;  255 0   0
+  ;颜色为黑色的，不显示图例
+  nclasses = N_ELEMENTS(normalIdx)
+  class_names = class_names[normalIdx]
+  rgb_table = [[[255B,255B,255B]],[rgb_table[*,normalIdx]]]
+
+  jiange=50
+  fangkuai=100
+  width = jiange*3+fangkuai+max(class_names.Strlen())*65LL
+  width = width>380
+
+  high = jiange*(nclasses+1)+fangkuai*(nclasses)
+
+  unit_high = 120 ;单位占的空白位置，其实是120+50
+  IF KEYWORD_SET(legend_unit) THEN high+=unit_high
+
+  tmpdata = bytarr(width,high)
+  FOR i=0,nclasses-1 DO BEGIN
+    starts = jiange
+    ends = jiange+fangkuai
+    startl = jiange+(fangkuai+jiange)*(i);+nameHigh
+    endl = startl+fangkuai
+    tmpdata[starts:ends, startl:endl]=byte(i+1)
+  ENDFOR
+
+  oi=IMAGE(tmpdata, rgb_table=rgb_table, /order, MARGIN=[0,0,0,0], $
+    DIMENSIONS=[width, high], /buffer)
+
+  ;加类名
+  txloc = jiange*2+fangkuai
+  FOR i=0,nclasses-1 DO BEGIN
+    tyloc = long((nclasses-0.5-i)*fangkuai + (nclasses-i)*jiange)
+    IF KEYWORD_SET(legend_unit) THEN tyloc+=unit_high
+    t=TEXT(txloc,tyloc,/data,class_names[i], vertical_alignment=0.5, color=[55B,64B,79B],$
+      font_name = 'Microsoft Yahei', font_size=60, baseline=[100.0,1E-5,1E-5])
+  ENDFOR
+
+  ;加单位
+  IF KEYWORD_SET(Legend_unit) THEN BEGIN
+
+    CASE STRUPCASE(legend_unit) OF
+      'SHESHIDU': legend_unit = '^\circC'
+      ELSE:
+    ENDCASE
+    legend_unit_text = '$'+legend_unit+'$' ;'Unit $'+legend_unit+'$'
+
+    tyloc = (unit_high+jiange)/2
+    t=text(jiange,tyloc, /data, legend_unit_text, vertical_alignment=0.5, color=[55B,64B,79B],  $
+      font_name = 'Microsoft Yahei', font_size=45, baseline=[100.0,1E-5,1E-5])
+  ENDIF
+
+  ;裁剪掉右侧空白区域
+  cb_data=oi.CopyWindow() & cb_dims=SIZE(cb_data, /dimensions) & oi.Close
+  cb_all255 = BYTARR(cb_dims[2])+255B
+  FOR i=cb_dims[1]-1,0,-1 DO BEGIN
+    IF ~ARRAY_EQUAL(cb_data[0,i,*], cb_all255) || ~ARRAY_EQUAL(cb_data[1,i,*], cb_all255) || $
+      ~ARRAY_EQUAL(cb_data[2,i,*], cb_all255) THEN BEGIN
+      cb_width = (i+48)<(cb_dims[1]-1)
+      BREAK
+    ENDIF
+  ENDFOR
+
+  cb_data = cb_data[*,0:cb_width,*]
+  cb_dims = SIZE(cb_data, /dimensions)
+
+  oi = IMAGE(cb_data, margin=[0.,0.,0.,0.], dimensions=cb_dims[1:2], /buffer)
+  oi.Save, LegendPngURL, width = ROUND((cb_width+1)*0.2)
+END
+
+
+PRO GetShapefileCoords, shpFile, Lon=Lon, Lat=Lat
+  COMPILE_OPT idl2
+  e=ENVI(/current)
+  ON_ERROR, 2
+
+  Lon=!NULL
+  Lat=!NULL
+
+  ;IF ~FILE_TEST(shpFile) THEN MESSAGE, 'file does not exist: '+shpFile, /noname
+
+  ;读取shp文件的信息
+  oshp=OBJ_NEW('IDLffShape',shpFile)
+  ;IF ~OBJ_VALID(oshp) THEN RETURN
+  oshp->GETPROPERTY,n_entities=n_ent ;记录个数
+
+  iProj = ENVI_PROJ_CREATE(/geographic)
+  ;自动读取prj文件获取投影坐标系
+  potPos = STRPOS(shpFile,'.',/reverse_search)  ;
+  prjfile = STRMID(shpFile,0,potPos[0])+'.prj'
+
+  IF FILE_TEST(prjfile) THEN BEGIN
+    OPENR, lun, prjFile, /GET_LUN
+    strprj = ''
+    READF, lun, strprj
+    FREE_LUN, lun
+
+    CASE STRMID(strprj, 0,6) OF
+      'GEOGCS': BEGIN
+        iProj = ENVI_PROJ_CREATE(PE_COORD_SYS_STR=strprj, $
+          type = 1)
+      END
+      'PROJCS': BEGIN
+        iProj = ENVI_PROJ_CREATE(PE_COORD_SYS_STR=strprj, $
+          type = 42)
+      END
+    ENDCASE
+  ENDIF
+
+  oProj = ENVI_PROJ_CREATE(/geographic)
+
+  FOR i = 0, n_ent-1 DO BEGIN
+    ;
+    ent = oshp->GETENTITY(i, /ATTRIBUTES) ;第i条记录
+
+    ;如果ent不是多边形，则继续
+    ;    IF ent.SHAPE_TYPE NE 5 THEN CONTINUE
+
+    N_VERTICES=ent.N_VERTICES ;顶点个数
+
+    parts=*(ent.PARTS)
+
+    verts=*(ent.VERTICES)
+    ; 将顶点坐标转换为经纬度
+    ENVI_CONVERT_PROJECTION_COORDINATES,  $
+      verts[0,*], verts[1,*], iProj,    $
+      oXlon, oYlat, oProj
+
+    Lon = [Lon, REFORM(oXlon)]
+    Lat = [Lat, REFORM(oYlat)]
+  ENDFOR
+
+  OBJ_DESTROY, oshp
+END
+
+
+;2018年4月27日 14:54:50 新版函数
+;roi_coords  - 传进来的为字符串，可以是web墨卡托坐标、shp文件路径、矢量文件压缩zip文件
+;rect_subset - 设置此关键字时，返回结果为虚拟栅格，矩形裁剪
+FUNCTION GSF_ROICoordsMaskRaster, raster, roi_coords,         $
+  rect_subset=rect_subset, background_value=background_value, $
+  output_uri=output_uri
+
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+  e=ENVI(/current)
+
+  ;如果没有设置roiCoords,则返回原始Raster
+  IF ~N_ELEMENTS(roi_coords) || roi_coords EQ ' ' THEN RETURN, raster
+
+  ;如果设置了rect_subset，矩形裁剪
+  IF KEYWORD_SET(rect_subset) THEN BEGIN
+
+    IF roi_coords.EndsWith('.zip',/fold_case) THEN BEGIN
+      ;如果传进来是Shapefile的压缩包zip文件路径
+      ;解压zip文件，并获取shp文件路径
+      tmp_shpdir = e.GetTemporaryFilename('') & FILE_MKDIR, tmp_shpdir
+      FILE_UNZIP, roi_coords, tmp_shpdir, /verbose
+      roi_coords = (FILE_SEARCH(tmp_shpdir,'*.shp'))[0]
+    ENDIF
+
+    IF roi_coords.EndsWith('.shp',/fold_case) THEN BEGIN
+      ;如果是shp文件
+      GetShapefileCoords, roi_coords, Lon=Lon, Lat=Lat
+      ;如果是解压的shp，则删除临时目录
+      IF N_ELEMENTS(tmp_shpdir) THEN FILE_DELETE, tmp_shpdir, /quiet, /allow_nonexistent, /recursive
+
+    ENDIF ELSE BEGIN
+      ;如果是Web墨卡托坐标
+      ;对坐标进行转换，转为2列N行的二维数组，[x,y]
+      tmpCoords = STRSPLIT(roi_coords,',',/extract,COUNT=count)
+      roi_coordsD = REFORM(DOUBLE(tmpCoords), 2, count/2)
+      webX=roi_coordsD[0,*]
+      webY=roi_coordsD[1,*]
+
+      ;Web墨卡托转换为经纬度
+      WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+      Lon = REFORM(Lon)
+      Lat = REFORM(Lat)
+    ENDELSE
+
+    ;经纬度转换为地理坐标，再转换为文件坐标
+    spatialRef = Raster.SPATIALREF
+    spatialRef.ConvertLonLatToMap, Lon, Lat, MapX, MapY
+    spatialRef.ConvertMapToFile, MapX, MapY, FileX, FileY
+
+    xmin = MIN(MapX,max = xMax)
+    yMin = MIN(MapY,max = yMax)
+    sub_raster = ENVISubsetRaster(Raster, $
+      SUB_RECT=[xMin,yMin,xMax,yMax], $
+      SPATIALREF=spatialRef)
+
+    ;获取矩形裁剪
+    RETURN, sub_raster
+  ENDIF
+
+  ;背景值处理，保留原始忽略值
+  IF ~KEYWORD_SET(background_value) THEN background_value=0
+  IF raster.Metadata.HasTag('data ignore value') THEN $
+    background_value = raster.Metadata['data ignore value']
+
+  ;如果是坐标，则生成shp
+  IF ~roi_coords.EndsWith('.zip',/fold_case) && $
+    ~roi_coords.EndsWith('.shp',/fold_case) THEN BEGIN
+    ;如果是Web墨卡托坐标
+    ;对坐标进行转换，转为2列N行的二维数组，[x,y]
+    tmpCoords = STRSPLIT(roi_coords,',',/extract,COUNT=count)
+    roi_coordsD = REFORM(DOUBLE(tmpCoords), 2, count/2)
+    webX=roi_coordsD[0,*] &  webY=roi_coordsD[1,*]
+
+    ;Web墨卡托转换为经纬度
+    WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+    Lon = REFORM(Lon) & Lat = REFORM(Lat)
+
+    ;生成shapefile
+    tmp_shpdir = e.GetTemporaryFilename('')+'_needtodelete' & FILE_MKDIR, tmp_shpdir
+    input_shpfile = FILEPATH('envitmp.shp', root_dir=tmp_shpdir)
+
+    ;2018年6月27日 10:53:42 更新 使用idlffshape，效率高
+    ;新建文件，设置类型为多边形
+    oShp=OBJ_NEW('IDLffShape', input_shpfile, /update,entity_type=5)
+    ;添加属性，字符串类型（不然在ArcGIS中打不开）
+    oShp->ADDATTRIBUTE, 'test name', 7, 50, PRECISION=0
+    ;新建一个Entity
+    entNew = {idl_shape_entity}
+    entNew.SHAPE_TYPE = 5 ;多边形
+
+    entNew.VERTICES = PTR_NEW(TRANSPOSE([[Lon],[Lat]]))
+    entNew.N_VERTICES = N_ELEMENTS(Lon)
+    ;写入记录
+    oShp.PutEntity, entNew
+
+    ;为此条记录添加属性
+    attrNew = oShp ->GETATTRIBUTES(/ATTRIBUTE_STRUCTURE)
+    attrNew.ATTRIBUTE_0 = 'testfile'
+    oShp.SetAttributes, 0, attrNew
+
+    ;因为坐标经纬度，获取坐标系字符串，写入prj文件
+    oProj = ENVI_PROJ_CREATE(/GEOGRAPHIC)
+    prjFile = input_shpfile.replace('.shp','.prj')
+    OPENW, lun, prjFile, /GET_LUN
+    PRINTF, lun, oProj.PE_COORD_SYS_STR
+    FREE_LUN, lun
+    OBJ_DESTROY, oShp
+
+    ;经纬度转换为地理坐标
+    ;    spatialRef = Raster.SPATIALREF
+    ;    spatialRef.ConvertLonLatToMap, Lon, Lat, MapX, MapY
+    ;
+    ;    roiData = TRANSPOSE([[MapX], [MapY]],[1,0])
+    ;    roiData = [[roiData], [roiData[*,0]]]
+    ;    oROI = ENVIROI(NAME='ROI', COLOR='Blue')
+    ;    oROI.AddGeometry, roiData, coord_sys=spatialRef.COORD_SYS_STR, /POLYGON
+
+
+
+    ;    raster.ExportRois, input_shpfile, oROI, 'shapefile'
+    ;    oROI.Close
+  ENDIF ELSE BEGIN
+    input_shpfile=roi_coords
+  ENDELSE
+
+  ;如果是shp文件或zip
+  GSF_VectorMaskRaster_Classic,        $
+    input_raster=raster,               $ ;输入栅格（ENVIRaster）【必选】
+    input_shpfile=input_shpfile,       $ ;输入矢量文件（shp文件路径）【必选】
+    background_value=background_value, $ ;背景值【可选】。默认0。优先使用输入栅格自带忽略值
+    output_raster=output_raster,       $ ;输出裁减后栅格（ENVIRaster）
+    output_uri=output_uri
+
+  RETURN, output_raster
+END
+
+;返回SubRect，用于GLT前的预裁剪
+FUNCTION GSF_GetSubRect_from_LonLatROICoords, lon_raster, lat_raster, roi_coords, $
+  roi_coords_string = roi_coords_string
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+
+  ;获取ROI的经纬度范围，最小最大
+  roi_coords_string = GSF_ROICoords2String(roi_coords, data_range=data_range)
+
+  lon_data = lon_raster.GetData()
+  lat_data = lat_raster.GetData()
+  idx = WHERE(lat_data GE data_range['minlat'] AND lat_data LE data_range['maxlat'] AND $
+    lon_data GE data_range['minlon'] AND lon_data LE data_range['maxlon'])
+
+  ;
+  IF idx[0] EQ -1 THEN MESSAGE, 'the input image does not contain the study area.', /noname
+
+  ;
+  dims = [lon_raster.nColumns, lon_raster.nRows]
+  file_xy=ARRAY_INDICES(dims, idx, /dimensions)
+  x=file_xy[0,*] & y=file_xy[1,*]
+  ;
+  sub_rect=[(MIN(x)-10)>0,(MIN(y)-10)>0,(MAX(x)+10)<(dims[0]-1),(MAX(y)+10)<(dims[1]-1)]
+
+  ;如果sub_rect的范围，在roi_coords中占比太少，则不作处理，说明数据严重缺失
+  sub_rect_maxlon = max(lon_data[idx], min=sub_rect_minlon)
+  sub_rect_maxlat = max(lat_data[idx], min=sub_rect_minlat)
+  sub_rect_roi = IDLanROI([sub_rect_minlon,sub_rect_minlon,sub_rect_maxlon,sub_rect_maxlon,sub_rect_minlon], $
+    [sub_rect_maxlat,sub_rect_minlat,sub_rect_minlat,sub_rect_maxlat,sub_rect_maxlat])
+  result = sub_rect_roi.ComputeGeometry(area=sub_rect_area)
+  lon_data=!NULL & lat_data=!NULL
+  ;
+  roi_coords_roi = IDLanROI([data_range['minlon'],data_range['minlon'],data_range['maxlon'],data_range['maxlon'],data_range['minlon']],$
+    [data_range['maxlat'],data_range['minlat'],data_range['minlat'],data_range['maxlat'],data_range['maxlat']])
+  result = roi_coords_roi.ComputeGeometry(area=roi_coords_area)
+
+  ;
+  IF sub_rect_area/roi_coords_area LT 0.8 THEN MESSAGE, 'the input image does not contain the region of interest.', /noname
+
+  RETURN, sub_rect
+END
+
+
+;将roi_coords转换为字符串x,y,x,y,x,y...小数点后保留5位
+;同时返回sub_rect，用于GLT前的预裁剪
+FUNCTION GSF_ROICoords2String, roi_coords, data_range=data_range
+
+  tmp_roi_coords = roi_coords
+
+  IF tmp_roi_coords.EndsWith('.zip',/fold_case) THEN BEGIN
+    ;如果传进来是Shapefile的压缩包zip文件路径
+    ;解压zip文件，并获取shp文件路径
+    tmp_shpdir = e.GetTemporaryFilename('') & FILE_MKDIR, tmp_shpdir
+    FILE_UNZIP, tmp_roi_coords, tmp_shpdir, /verbose
+    tmp_roi_coords = (FILE_SEARCH(tmp_shpdir,'*.shp'))[0]
+  ENDIF
+
+  IF tmp_roi_coords.EndsWith('.shp',/fold_case) THEN BEGIN
+    ;如果是shp文件
+    GetShapefileCoords, tmp_roi_coords, Lon=Lon, Lat=Lat
+    ;如果是解压的shp，则删除临时目录
+    IF N_ELEMENTS(tmp_shpdir) THEN FILE_DELETE, tmp_shpdir, /quiet, /allow_nonexistent, /recursive
+
+  ENDIF ELSE BEGIN
+    ;如果是Web墨卡托坐标
+    ;对坐标进行转换，转为2列N行的二维数组，[x,y]
+    tmpCoords = STRSPLIT(tmp_roi_coords,',',/extract,COUNT=count)
+    roi_coordsD = REFORM(DOUBLE(tmpCoords), 2, count/2)
+    webX=roi_coordsD[0,*]
+    webY=roi_coordsD[1,*]
+
+    ;Web墨卡托转换为经纬度
+    WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+    Lon = REFORM(Lon)
+    Lat = REFORM(Lat)
+  ENDELSE
+
+  IF ARG_PRESENT(data_range) THEN $
+    data_range = ORDEREDHASH('minlat', MIN(Lat), 'maxlat', MAX(Lat), $
+    'minlon', MIN(Lon), 'maxlon', MAX(Lon))
+
+  ;合并为字符串
+  count = N_ELEMENTS(Lon)
+  roi_coords_string = STRJOIN(GSF_Number_Formatter(REFORM(TRANSPOSE(REFORM([lon,lat],count,2))$
+    ,count*2),decimals=5),',')
+  RETURN, roi_coords_string
+END
+
+
+PRO GSF_ROICoords2Shapefile, roi_coords, out_shpfile=out_shpfile
+  COMPILE_OPT idl2
+
+  tmpCoords = STRSPLIT(roi_coords,',',/extract,COUNT=count)
+  roi_coordsD = REFORM(DOUBLE(tmpCoords), 2, count/2)
+  webX=roi_coordsD[0,*] &  webY=roi_coordsD[1,*]
+
+  ;Web墨卡托转换为经纬度
+  WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+  Lon = REFORM(Lon) & Lat = REFORM(Lat)
+
+  ;生成shapefile
+  IF ~KEYWORD_SET(out_shpfile) THEN out_shpfile = e.GetTemporaryFilename('shp')
+
+  ;2018年6月27日 10:53:42 更新 使用idlffshape，效率高
+  ;新建文件，设置类型为多边形
+  oShp=OBJ_NEW('IDLffShape', out_shpfile, /update,entity_type=5)
+  ;添加属性，字符串类型（不然在ArcGIS中打不开）
+  oShp->ADDATTRIBUTE, 'test name', 7, 50, PRECISION=0
+  ;新建一个Entity
+  entNew = {idl_shape_entity}
+  entNew.SHAPE_TYPE = 5 ;多边形
+
+  entNew.VERTICES = PTR_NEW(TRANSPOSE([[Lon],[Lat]]))
+  entNew.N_VERTICES = N_ELEMENTS(Lon)
+  ;写入记录
+  oShp.PutEntity, entNew
+
+  ;为此条记录添加属性
+  attrNew = oShp ->GETATTRIBUTES(/ATTRIBUTE_STRUCTURE)
+  attrNew.ATTRIBUTE_0 = 'testfile'
+  oShp.SetAttributes, 0, attrNew
+
+  ;因为坐标经纬度，获取坐标系字符串，写入prj文件
+  oProj = ENVI_PROJ_CREATE(/GEOGRAPHIC)
+  prjFile = out_shpfile.replace('.shp','.prj')
+  OPENW, lun, prjFile, /GET_LUN
+  PRINTF, lun, oProj.PE_COORD_SYS_STR
+  FREE_LUN, lun
+  OBJ_DESTROY, oShp
+END
+
+
+PRO GSF_VectorMaskRaster_Classic,       $
+  input_raster=input_raster,            $ ;输入栅格（ENVIRaster）【必选】
+  input_shpfile=input_shpfile,          $ ;输入矢量文件（shp文件路径）【必选】支持zip压缩包
+  inverse_mask=inverse_mask,            $ ;是否逆向裁剪【可选】
+  background_value=background_value,    $ ;背景值【可选】。默认0。优先使用输入栅格自带忽略值
+  output_raster=output_raster,          $ ;输出裁减后栅格（ENVIRaster）
+  output_uri=output_uri                   ;设置输出文件路径【可选】，如果不设置，则输出到临时目录
+
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+  e=envi(/current)
+
+  ;input_shpfile支持zip压缩包格式
+  shp_ext = GSF_GetFileExtension(input_shpfile, basename=shp_basename)
+  CASE STRLOWCASE(shp_ext) OF
+    '.zip': BEGIN
+      tmp_shpdir = shp_basename+'_needtodelete'
+      FILE_MKDIR, tmp_shpdir
+      FILE_UNZIP, input_shpfile, tmp_shpdir, /verbose
+      input_shpfile = (FILE_SEARCH(tmp_shpdir,'*.shp'))[0]
+    END
+    '.shp':
+  ENDCASE
+
+  fid = ENVIRasterToFID(input_raster)
+  ENVI_FILE_QUERY, fid, ns=ns, nl=nl, nb=nb, $
+    dims=dims, fname=fname, bnames=bnames
+  pos = LINDGEN(nb)
+
+  IF ~N_ELEMENTS(background_value) THEN background_value=0
+
+  ;背景值处理，保留原始忽略值
+  IF input_raster.Metadata.HasTag('data ignore value') THEN $
+    background_value = input_raster.Metadata['data ignore value']
+
+  ;读取shp文件的信息
+  oshp=OBJ_NEW('IDLffShape',input_shpfile)
+  IF ~OBJ_VALID(oshp) THEN RETURN
+  oshp->GETPROPERTY,n_entities=n_ent, $ ;记录个数
+    Attribute_info=attr_info,         $ ;属性信息，结构体， name为属性名
+    ATTRIBUTE_NAMES = attr_names,     $
+    n_attributes=n_attr,              $ ;属性个数
+    Entity_type=ent_type                ;记录类型
+
+  iProj = ENVI_PROJ_CREATE(/geographic)
+  ;自动读取prj文件获取投影坐标系
+  prjfile = input_shpfile.Replace('.shp','.prj',/fold_case)
+
+  IF FILE_TEST(prjfile) THEN BEGIN
+    OPENR, lun, prjFile, /GET_LUN
+    strprj = ''
+    READF, lun, strprj
+    FREE_LUN, lun
+
+    CASE STRMID(strprj, 0,6) OF
+      'GEOGCS': BEGIN
+        iProj = ENVI_PROJ_CREATE(PE_COORD_SYS_STR=strprj, $
+          type = 1)
+      END
+      'PROJCS': BEGIN
+        iProj = ENVI_PROJ_CREATE(PE_COORD_SYS_STR=strprj, $
+          type = 42)
+      END
+    ENDCASE
+  ENDIF
+
+  oProj = ENVI_GET_PROJECTION(fid = fid)
+
+  ;然后使用ROI进行掩膜统计
+  roi_ids = !NULL
+  FOR i = 0, n_ent-1 DO BEGIN
+    ;
+    ent = oshp->GETENTITY(i, /ATTRIBUTES) ;第i条记录
+
+    ;如果ent不是多边形，则继续
+    IF ent.SHAPE_TYPE NE 5 THEN CONTINUE
+
+    N_VERTICES=ent.N_VERTICES ;顶点个数
+
+    parts=*(ent.PARTS)
+
+    verts=*(ent.VERTICES)
+    ; 将顶点坐标转换为输入文件的地理坐标
+    ENVI_CONVERT_PROJECTION_COORDINATES,  $
+      verts[0,*], verts[1,*], iProj,    $
+      oXmap, oYmap, oProj
+    ; 转换为文件坐标
+    ENVI_CONVERT_FILE_COORDINATES,fid,    $
+      xFile,yFile,oXmap,oYmap
+
+    IF (MIN(xFile) GE ns OR $
+      MIN(yFile) GE nl OR $
+      MAX(xFile) LE 0 OR $
+      MAX(yFile) LE 0) AND i NE 0 THEN CONTINUE
+
+    ;记录XY的区间，裁剪用
+    IF i EQ 0 THEN BEGIN
+      xmin = ROUND(MIN(xFile,max = xMax))
+      yMin = ROUND(MIN(yFile,max = yMax))
+    ENDIF ELSE BEGIN
+      xmin = xMin < ROUND(MIN(xFile))
+      xMax = xMax > ROUND(MAX(xFile))
+      yMin = yMin < ROUND(MIN(yFile))
+      yMax = yMax > ROUND(MAX(yFile))
+    ENDELSE
+
+    ;创建ROI
+    N_Parts = N_ELEMENTS(Parts)
+
+    FOR j=0, N_Parts-1 DO BEGIN
+      roi_id = ENVI_CREATE_ROI(color=i,     $
+        ns = ns ,  nl = nl)
+      IF j EQ N_Parts-1 THEN BEGIN
+        tmpFileX = xFile[Parts[j]:*]
+        tmpFileY = yFile[Parts[j]:*]
+      ENDIF ELSE BEGIN
+        tmpFileX = xFile[Parts[j]:Parts[j+1]-1]
+        tmpFileY = yFile[Parts[j]:Parts[j+1]-1]
+      ENDELSE
+
+      ENVI_DEFINE_ROI, roi_id, /polygon,    $
+        xpts=REFORM(tmpFileX), ypts=REFORM(tmpFileY)
+
+      ;如果有的ROI像元数为0，则不保存
+      ENVI_GET_ROI_INFORMATION, roi_id, NPTS=npts
+      IF npts EQ 0 THEN CONTINUE
+
+      roi_ids = [roi_ids, roi_id]
+    ENDFOR
+  ENDFOR
+
+  IF KEYWORD_SET(inverse_mask) THEN inside=0 ELSE inside=1
+
+  ;创建掩膜，裁剪后掩
+  mask_file = e.GetTemporaryFilename()
+  ENVI_MASK_DOIT,         $
+    AND_OR = 2,           $
+    IN_MEMORY=0,          $
+    ROI_IDS= roi_ids,     $ ;ROI的ID
+    ns = ns, nl = nl,     $
+    inside=inside,        $ ;区域内或外
+    r_fid = m_fid,        $
+    out_name = mask_file
+
+  envi_doit, 'envi_stats_doit', fid=m_fid, pos=[0], $
+    dims=dims, comp_flag=1, dmin=dmin, dmax=dmax
+  IF dmax EQ 0 THEN BEGIN
+    ENVI_FILE_MNG, id=m_fid, /remove, /delete
+    OBJ_DESTROY, oshp
+    ;如果上一层目录以 needtodelete 结尾，则删之
+    tmp_shpdir = FILE_DIRNAME(input_shpfile)
+    IF tmp_shpdir.EndsWith('_needtodelete') THEN $
+      FILE_DELETE, tmp_shpdir, /quiet, /allow_nonexistent, /recursive
+
+    MESSAGE, 'There is no overlap between raster and vector.', /noname
+  ENDIF
+
+  ;删除临时解压路径
+  OBJ_DESTROY, oshp
+
+  ;如果上一层目录以 needtodelete 结尾，则删之
+  tmp_shpdir = FILE_DIRNAME(input_shpfile)
+  IF tmp_shpdir.EndsWith('_needtodelete') THEN $
+    FILE_DELETE, tmp_shpdir, /quiet, /allow_nonexistent, /recursive
+
+  ENVI_FILE_MNG, id=m_fid, /remove
+  ENVI_OPEN_FILE, mask_file, r_fid=m_fid
+
+  ;进行掩膜 ---即不规则裁剪
+  ;out_dims必须round，否则报错
+  CASE inside OF
+    0: out_dims=dims
+    1: BEGIN
+      ;进行掩膜 ---即不规则裁剪
+      ;out_dims必须round，否则报错
+      xMin = xMin >0
+      xMax = ROUND(xMax) < (ns-1)
+      yMin = yMin >0
+      yMax = ROUND(yMax) < (nl-1)
+      out_dims = [-1,xMin,xMax,yMin,yMax]
+    END
+  ENDCASE
+
+  ;如果不设置输出路径，则输出到临时目录
+  IF ~KEYWORD_SET(output_uri) THEN output_uri=e.GetTemporaryFilename()
+
+  ENVI_MASK_APPLY_DOIT, FID = fid,      $
+    pos = pos,                          $
+    dims = out_dims,                    $
+    m_fid = m_fid, m_pos = [0],         $
+    value = background_value,           $
+    r_fid = r_fid,                      $
+    out_bname = bnames,                 $
+    out_name = output_uri
+
+  ; 掩膜文件ID移除
+  ENVI_FILE_MNG, id=m_fid, /remove,/delete
+  ENVI_FILE_MNG, id=r_fid, /remove
+
+  ;忽略背景值，保留时间属性
+  IF input_raster.time.acquisition NE !NULL THEN BEGIN
+    timeStr = input_raster.time.acquisition
+    timeObj = ENVITime(ACQUISITION = timeStr)
+    output_raster = e.OpenRaster(output_uri, time_override=timeObj)
+  ENDIF ELSE BEGIN
+    output_raster = e.OpenRaster(output_uri)
+  ENDELSE
+
+  output_raster.Metadata.AddItem, 'data ignore value', background_value, error=err
+  output_raster.Metadata.UpdateItem, 'data ignore value', background_value, error=err
+  output_raster.WriteMetadata
+  output_raster.Close
+
+  ;更新 linux有可能生成.dat.hdr文件，删除
+  FILE_DELETE, output_uri+'.hdr', /allow_nonexistent, /quiet
+
+  output_raster = e.OpenRaster(output_uri)
+END
+
+
+
+;【旧的接口】
+;先分别裁剪，再镶嵌
+;roiCoords - 传进来的为字符串，web墨卡托坐标
+;            或为shp文件路径
+FUNCTION GetROIRasterViaCoords, Raster, roiCoords, $
+  subRect=subRect, outName=outName, $
+  backgroundValue=backgroundValue
+  COMPILE_OPT idl2
+
+  ;如果没有设置roiCoords,则返回原始Raster
+  IF ~N_ELEMENTS(roiCoords) THEN RETURN, Raster
+
+  e=ENVI(/current)
+
+  IF ~KEYWORD_SET(backgroundValue) THEN backgroundValue=0
+  ;
+  IF roiCoords.EndsWith('.zip',/fold_case) THEN BEGIN
+    ;如果传进来是Shapefile的压缩包zip文件路径
+    ;解压zip文件，并获取shp文件路径
+    shpZipPath = FILE_DIRNAME(roiCoords)+PATH_SEP()
+    unZipPath = FILE_BASENAME(e.GetTemporaryFilename(),'.dat')
+    FILE_UNZIP, roiCoords, shpZipPath+unZipPath, FILES=files
+    idx = WHERE(files.EndsWith('.shp', /fold_case) EQ 1)
+
+    ;删除原始zip包
+    ;    FILE_DELETE, roiCoords, /QUIET
+
+    roiCoords = files[idx[0]]
+    !SERVER.NOTIFY, 20, '解压矢量文件成功'
+    ;    PRINT, roiCoords
+  ENDIF
+
+
+  IF roiCoords.EndsWith('.shp',/fold_case) THEN BEGIN
+    ;如果是shp文件
+    GetShapefileCoords, roiCoords, Lon=Lon, Lat=Lat
+  ENDIF ELSE BEGIN
+    ;如果是Web墨卡托坐标
+    ;对坐标进行转换，转为2列N行的二维数组，[x,y]
+    tmpCoords = STRSPLIT(roiCoords,',',/extract,COUNT=count)
+    roiCoordsD = REFORM(DOUBLE(tmpCoords), 2, count/2)
+    webX=roiCoordsD[0,*]
+    webY=roiCoordsD[1,*]
+
+    ;Web墨卡托转换为经纬度
+    WebMercator_to_WGS84, WebX=WebX, WebY=WebY, Lon=Lon, Lat=Lat
+    Lon = REFORM(Lon)
+    Lat = REFORM(Lat)
+  ENDELSE
+
+  ;经纬度转换为地理坐标，再转换为文件坐标
+  spatialRef = Raster.SPATIALREF
+  spatialRef.ConvertLonLatToMap, Lon, Lat, MapX, MapY
+  spatialRef.ConvertMapToFile, MapX, MapY, FileX, FileY
+
+  xmin = MIN(MapX,max = xMax)
+  yMin = MIN(MapY,max = yMax)
+  subRaster = ENVISubsetRaster(Raster, $
+    SUB_RECT=[xMin,yMin,xMax,yMax], $
+    SPATIALREF=spatialRef)
+
+  ;获取矩形裁剪
+  IF KEYWORD_SET(subRect) THEN RETURN, subRaster
+
+  ;根据地理坐标，新建ROI
+  roi = EnviRoi(NAME='ROI', COLOR='Green')
+
+  IF roiCoords.EndsWith('.shp',/fold_case) THEN BEGIN
+    ;如果是shp文件
+    shape = IDLffShape(roiCoords)
+    shape.GetProperty, N_ENTITIES=num_ent
+    records = LINDGEN(num_ent)
+    OBJ_DESTROY, shape
+    input_vector = e.OpenVector(roiCoords)
+    roi.AddVectorRecords, input_vector, records
+
+  ENDIF ELSE BEGIN
+    roiData = TRANSPOSE([[MapX], [MapY]],[1,0])
+    roiData = [[roiData], [roiData[*,0]]]
+    roi.AddGeometry, roiData, coord_sys=spatialRef.COORD_SYS_STR, /POLYGON
+  ENDELSE
+
+  ; 使用ROI
+  ;  roiFile = e.GetTemporaryFilename('.xml')
+  ;  roi.Save, roiFile
+  ;  roiRaster = ENVIRoiMaskRaster(Raster,roi)
+
+  ;使用矢量
+  ;      roiFile = e.GetTemporaryFilename('.shp')
+  ;      Raster.ExportROIs, roiFile, ROI, 'shapefile'
+  ;      shpVector = e.OpenVector(roiFile)
+  ;      roiRaster = ENVIVectorMaskRaster(raster, shpVector)
+
+  ;使用掩膜文件
+  roiFile = e.GetTemporaryFilename('roi')
+  subRaster.ExportROIs, roiFile, ROI, 'CLASSIC'
+  ENVI_RESTORE_ROIS, roiFile
+  roi_ids = ENVI_GET_ROI_IDS()
+  maskFile = e.GetTemporaryFilename()
+  ENVI_MASK_DOIT,         $
+    AND_OR = 2,           $
+    IN_MEMORY=0,          $
+    ROI_IDS= roi_ids,     $ ;ROI的ID
+    ns = subRaster.NCOLUMNS, $
+    nl = subRaster.NROWS,    $
+    inside=1,             $ ;区域内或外
+    r_fid = m_fid, out_name = maskFile
+  maskRaster = ENVIFIDToRaster(m_fid)
+
+  ;ROI掩膜
+  Task = ENVITask('MaskRaster')
+  Task.DATA_IGNORE_VALUE = backgroundValue
+  Task.INPUT_RASTER = subRaster
+  Task.INPUT_MASK_RASTER =maskRaster
+  IF KEYWORD_SET(outName) THEN Task.OUTPUT_RASTER_URI = outName
+  Task.Execute
+
+  ENVI_DELETE_ROIS, /all
+
+  ;删除文件
+  roi.Close
+  ENVI_FILE_MNG, id=m_fid, /REMOVE, /DELETE
+  FILE_DELETE, roiFile, /QUIET
+  RETURN, Task.OUTPUT_RASTER
+END
+
+FUNCTION MosaicRasterViaIDs, URL, IDs, outputFile=outputFile
+  COMPILE_OPT idl2
+  e=ENVI(/headless)
+  ;
+  ;  URL='http://192.168.100.118:6080/arcgis/rest/services/DS_PAI/ImageServer'
+  ;  IDs=STRJOIN(STRTRIM([6:9],2),',')
+  ;  outputFile='D:\temp\CIR_from_ImageryServices_1_5.dat'
+
+  IF URL EQ '' THEN RETURN, !NULL
+
+  ;将字符串IDs进行拆分，得到ID数组
+  arrIDs = STRTRIM(STRSPLIT(IDs, ',', /EXTRACT, COUNT=count),2)
+  IF count EQ 0 THEN RETURN, !NULL
+  ;
+  ;  URL += PATH_SEP()
+  scenes = !NULL
+  ;
+  ;  username='super'
+  ;  password='11111111'
+
+  countStr = STRTRIM(count,2)
+
+  ;循环打开所有ID的数据
+  FOR i=0, count-1 DO BEGIN
+    raster = e.OpenRaster(URL+arrIDs[i], $
+      DATA_IGNORE_VALUE=0, ERROR=err)
+    IF err NE '' THEN BEGIN
+      PRINT, err
+      CONTINUE
+    ENDIF
+    MESSAGE, '打开文件进度 (' + STRTRIM(i+1,2)+'/'+countStr+')', /continue, /informational
+    ;如果只有1景图像，则直接返回
+    IF count EQ 1 THEN RETURN, raster
+    scenes = [scenes, raster]
+  ENDFOR
+
+  ;如果打开数据均有问题，则返回空
+  IF scenes EQ !NULL THEN RETURN, !NULL
+
+  ;得到镶嵌结果
+  mosaicRaster = ENVIMOSAICRASTER(scenes)
+
+  IF KEYWORD_SET(outputFile) THEN mosaicRaster.Export, outputFile, 'envi'
+
+  ;关闭输入数据
+  ;  FOREACH element, scenes DO element.CLOSE
+  RETURN, mosaicRaster
+END
+
+
+
+PRO GSF_Get_Output_Filename,      $
+  input_file=input_file,          $ ;输入文件名
+  file_extension=file_extension,  $ ;后缀
+  output_path=output_path,        $ ;当设置为same时，输出路径与输入路径一致
+  delete_exist=delete_exist,      $
+  output_file=output_file
+
+  COMPILE_OPT idl2
+
+  ;获取输入文件名basename
+  input_basename = file_basename(input_file)
+  input_basename = file_basename(input_basename, $
+    strmid(input_basename, strpos(input_basename, '.', /reverse_search)))
+
+  ;比较特殊的后缀 .tar.gz
+  IF input_file.EndsWith('.tar.gz',/fold_case) THEN $
+    input_basename = FILE_BASENAME(input_file, '.tar.gz', /fold_case)
+
+  ;获取输出路径
+  IF ~N_ELEMENTS(output_path) THEN BEGIN
+    ;如果不设置，则使用当前路径
+    ;    cd, current=currentpath
+    ;    output_path = currentpath+PATH_SEP()
+    e=envi(/headless)
+    output_path = FILE_DIRNAME(e.GetTemporaryFilename())
+  ENDIF ELSE BEGIN
+    IF output_path EQ 'same' THEN output_path=FILE_DIRNAME(input_file)
+  ENDELSE
+
+  ;file_extension = '_PanSharpening.dat'
+  IF ~KEYWORD_SET(file_extension) THEN file_extension=''
+  ;  output_file = output_path+input_basename+file_extension
+  output_file = FILEPATH(input_basename+file_extension, root_dir=output_path)
+  IF KEYWORD_SET(delete_exist) THEN $
+    GSF_File_Delete_Enhanced, output_file
+END
+
+
+;合并多个HASH
+FUNCTION GSF_Join_Hashs, hash_array
+  COMPILE_OPT idl2
+
+  ;如果为空
+  IF hash_array[0] EQ !NULL THEN RETURN, !NULL
+
+  ;获取信息
+  n_hash = N_ELEMENTS(hash_array)
+
+  ;如果只有一个信息
+  IF n_hash EQ 1 THEN RETURN, hash_array[0]
+
+  hash_keys = hash_array[0].keys()
+  n_keys = N_ELEMENTS(hash_keys)
+
+  joined_hash = ORDEREDHASH()
+
+  ;处理每一个key
+  FOR i = 0, n_keys-1 DO BEGIN
+
+    ;特殊处理MapExtent
+    IF STRMATCH(hash_keys[i], 'MapExtent', /fold_case) THEN BEGIN
+      joined_hash += HASH('MapExtent', (hash_array[0])['MapExtent'])
+      CONTINUE
+    ENDIF
+
+    ;对于其他Key，则放在一个数组里
+    joined_values = !NULL
+    FOREACH element, hash_array DO BEGIN
+      joined_values = [joined_values, element[hash_keys[i]]]
+    ENDFOREACH
+    joined_hash += HASH(hash_keys[i], joined_values)
+  ENDFOR
+
+  RETURN, joined_hash
+END
+
+;在IDL中调用GSFtask返回的out_options需要转换一下
+FUNCTION Convert_GSFTask_Outoptions_To_HASH, in_options
+  elements = in_options['elements']
+  keys = elements.keys()
+  ;
+  out_options = ORDEREDHASH()
+  FOREACH key, keys DO BEGIN
+    IF key.Matches('MapExtent',/fold_case) THEN $
+      out_options += HASH(key, ((elements[key])['dehydratedForm']).ToArray(/transpose)) $
+    ELSE out_options += HASH(key, (elements[key])['dehydratedForm'])
+  ENDFOREACH
+  RETURN, out_options
+END
+
+
+;获取配置参数 config.json
+FUNCTION GSF_Get_Config_Parameter, name
+  COMPILE_OPT idl2
+
+  root_path = FILE_DIRNAME(FILE_DIRNAME(ROUTINE_FILEPATH()))
+  config_file = FILEPATH('config.json', root_dir=root_path)
+  IF ~FILE_TEST(config_file) THEN RETURN, !NULL
+
+  config_hash = JSON_PARSE(config_file)
+
+  IF ~N_ELEMENTS(name) THEN RETURN, !NULL
+  IF ~config_hash.hasKey(name) THEN RETURN, !NULL
+
+  RETURN, config_hash[name]
+END
+
+; Copyright (c)  Exelis Visual Information Solutions, Inc., a subsidiary of Harris Corporation. All
+;       rights reserved. Unauthorized reproduction is prohibited.
+;+
+; NAME:
+;   TIMEGEN
+;
+; PURPOSE:
+;   The TIMEGEN function returns an array (with the specified dimensions)
+;   of double-precision floating-point values that represent times
+;   in terms of Julian dates.
+;
+; CALLING SEQUENCE:
+;
+;   Result = TIMEGEN([D1,...,D8]
+;       [, START=value [, FINAL=value]]
+;       [, STEP_SIZE=value] [, UNITS=string]
+;       [, YEAR=value] [, MONTH=vector] [, DAY= vector]
+;       [, HOUR= vector] [, MINUTE= vector] [, SECOND= vector])
+;
+; INPUTS:
+;
+;   Di   The dimensions of the result.
+;
+; KEYWORD PARAMETERS:
+;
+;   DAY    If UNITS is set to "Years" or "Months",
+;          then set this keyword to a scalar or a vector giving the
+;          day values that should be included within each month.
+;          If UNITS is set to "Days", "Hours", "Minutes", or "Seconds",
+;          then set this keyword to a scalar giving the starting day
+;          (in this case the day from START is ignored).
+;
+;   FINAL  Set this keyword to a double-precision value representing the
+;          Julian date/time to use as the last value in the returned array.
+;          In this case, the dimension arguments are ignored and
+;          Result is a one-dimensional array, with the number of elements
+;          depending upon the step size. The FINAL time may be less than the
+;          START time, in which case STEP_SIZE should be negative.
+;
+;      Note - If the step size is not an integer then the last element
+;          may not be equal to the FINAL time. In this case, TIMEGEN will
+;          return enough elements such that the last element
+;          is less than or equal to FINAL.
+;
+;   HOUR   If UNITS is set to "Years", "Months", or "Days",
+;          then set this keyword to a scalar or a vector giving the
+;          hour values that should be included within each day.
+;          If UNITS is set to "Hours", "Minutes", or "Seconds",
+;          then set this keyword to a scalar giving the starting hour
+;          (in this case the hour from START is ignored).
+;
+;   MINUTE If UNITS is set to "Years", "Months", "Days", or "Hours",
+;          then set this keyword to a scalar or a vector giving the
+;          minute values that should be included within each hour.
+;          If UNITS is set to "Minutes", or "Seconds",
+;          then set this keyword to a scalar giving the starting minute
+;          (in this case the minute from START is ignored).
+;
+;   MONTH  If UNITS is set to "Years",
+;          then set this keyword to a scalar or a vector giving the
+;          month values that should be included within each year.
+;          If UNITS is set to "Months", "Days", "Hours", "Minutes", or
+;          "Seconds", then set this keyword to a scalar giving the starting
+;          month (in this case the month from START is ignored).
+;
+;   SECOND If UNITS is set to "Years", "Months", "Days", "Hours",or "Minutes",
+;          then set this keyword to a scalar or a vector giving the
+;          second values that should be included within each minute.
+;          If UNITS is set to "Seconds",
+;          then set this keyword to a scalar giving the starting second
+;          (in this case the second from START is ignored).
+;
+;   START  Set this keyword to a double-precision value representing the
+;          Julian date/time to use as the first value in the returned array.
+;          The default is 0.0d [January 1, 4713 B.C.E. at 12 pm (noon)].
+;
+;     Note - If subintervals are provided by MONTHS, DAYS, HOURS, MINUTES, or
+;          SECONDS, then the first element may not be equal to the START time.
+;          In this case the first element in the returned array will be
+;          greater than or equal to START.
+;
+;   STEP_SIZE Set this keyword to a scalar value representing the step size
+;          between the major intervals of the returned array.
+;          The step size may be negative. The default step size is 1.
+;          For UNITS="Years" or "Months", the STEP_SIZE value is rounded
+;          to the nearest integer.
+;
+;   UNITS  Set this keyword to a scalar string indicating the time units
+;          to be used for the major intervals for the generated array.
+;          Valid values include:
+;                "Years" or "Y"
+;                "Months" or "M"
+;                "Days" or "D"
+;                "Hours" or "H"
+;                "Minutes" or "I"
+;                "Seconds" or "S"
+;          The case (upper or lower) is ignored.
+;          If this keyword is not specified, then the default for UNITS is
+;          given by the next-largest time unit that is not specified
+;          by a keyword. If none of the keywords are present then the
+;          default is UNITS="Days".
+;
+;   YEAR   Set this keyword to a scalar giving the starting year.
+;          If YEAR is specified then the year from START is ignored.
+;
+; OUTPUT:
+;   The result returned by TIMEGEN is a double-precision array.
+;
+; PROCEDURE:
+;   Uses CALDAT, JULDAY.
+;
+; EXAMPLE:
+;
+;  1. Generate an array of 366 time values that are one day apart:
+;            MyDates = TIMEGEN(366, START=JULDAY(1,1,2000))
+;
+;  2. Generate an array of 20 time values that are 12 hours apart:
+;            MyTimes = TIMEGEN(20, UNITS="Hours", STEP_SIZE=12, $
+;                      START=SYSTIME(/JULIAN))
+;
+;  3. Generate an array of time values that are 1 hour apart from
+;     1 January 2000 until the current time:
+;            MyTimes = TIMEGEN(START=JULDAY(1,1,2000), $
+;                      FINAL=SYSTIME(/JULIAN), UNITS="Hours")
+;
+;  4. Generate an array of time values composed of [seconds, minutes, hours]
+;     that start from the current hour:
+;            MyTimes = TIMEGEN(60, 60, 24, $
+;                      START=FLOOR(SYSTIME(/JULIAN)*24)/24d, UNITS="S")
+;
+;  5. Generate an array of 24 time values with monthly intervals, but with
+;     subintervals at 5 pm on the first and fifteenth of each month:
+;            MyTimes = TIMEGEN(24, START=FLOOR(SYSTIME(/JULIAN)), $
+;                      DAYS=[1,15],HOUR=17)
+;
+; MODIFICATION HISTORY:
+;   Written by: CT, RSI, May 2000.
+;
+;-
+
+
+
+; TIMEGEN_REBIN
+;  This routine embeds time values of a certain unit (such as minutes)
+;  within an array of smaller (seconds) and larger (hours) time units.
+;
+;  timeIn = Vector of time values of length nTime (months, days, hours, etc.).
+;  nSmaller = Number of smaller time values to embed within timeIn.
+;  nTotal = Expand timeIn (nTime+nSmaller) out to this larger size by
+;          cyclically repeating the values.
+;
+FUNCTION timegen_rebin, timeIn, nSmaller, nTotal, $
+  FACTOR=factor
+
+  COMPILE_OPT hidden,idl2
+  ON_ERROR, 2
+
+  IF KEYWORD_SET(factor) THEN timeIn = TEMPORARY(timeIn)/factor
+  nTime = N_ELEMENTS(timeIn)
+  ; if 1-element array or scalar, return a scalar
+  IF (nTime EQ 1) THEN RETURN, timeIn[0]
+  ; if there are "smaller" units (e.g. seconds compared to minutes),
+  ; then repeat each timeIn element nSmaller number of times
+  IF (nSmaller GT 1) THEN BEGIN
+    timeIn = REBIN(REFORM(TEMPORARY(timeIn),1,nTime), nSmaller, nTime)
+    nTime = nSmaller*nTime   ; new number of current times
+  ENDIF
+  ; now embed the array within the larger time units by cyclically
+  ; repeating the set of timeIn (nTime+nSmaller) values to get
+  ; a total number nTotal
+  IF (nTotal GT nTime) THEN BEGIN
+    timeIn = REBIN(REFORM(TEMPORARY(timeIn),nTime), $
+      nTime, (nTotal+nTime-1)/nTime)
+    ; we may have up to nTime-1 extra elements,
+    ; so strip them off before returning
+    IF (N_ELEMENTS(timeIn) NE nTotal) THEN timeIn = timeIn[0:nTotal-1]
+  ENDIF
+  RETURN, timeIn
+END
+
+
+; TIMEGEN_DAY_CHECK
+;  This routine truncates day values so they are within the day range
+;  for each month.
+;
+;  monthArray = Vector of month values.
+;  dayArray = Vector of day values.
+;  yearArray = Vector of year values.
+;
+;  Returns dayArray truncated to be <= to max for each month.
+;
+FUNCTION timegen_day_check, monthArray, dayArray, yearArray
+
+  COMPILE_OPT hidden,idl2
+  ON_ERROR, 2
+  dayArray = TEMPORARY(dayArray) > 1
+  IF (MAX(dayArray) GT 28) THEN BEGIN
+    ; B.C.E. years are offset by 1
+    yearArray1 = yearArray + (yearArray LT 0)
+    ; years divisible by 4 are leap years
+    div4 = (yearArray1 MOD 4) EQ 0
+    ; years divisible by 100 are not leap years (except before 1582)
+    notdiv100 = ((yearArray1 MOD 100) NE 0) OR (yearArray1 LT 1582)
+    ; except years divisible by 400, which are leap years
+    div400 = (yearArray1 MOD 400) EQ 0
+    leapYear = (monthArray EQ 2) AND ((div4 AND notdiv100) OR div400)
+    ; day lengths for each month (29 February days for leap years)
+    ;                Ja Fe Ma Ap Ma Ju Jy Au Se Oc No De
+    monthLength = [0,31,28,31,30,31,30,31,31,30,31,30,31]
+    monthCheck = monthLength[monthArray] + leapYear
+    dayArray = TEMPORARY(dayArray) < monthCheck
+  ENDIF
+  RETURN, dayArray
+END
+
+
+;***************************************************** start of main routine
+FUNCTION timegen, d1, d2, d3, d4, d5, d6, d7, d8, $
+  START=startIn, FINAL=finalIn, $
+  STEP_SIZE=step_sizeIn, $
+  UNITS=unitsIn, $
+  YEAR=yearIn, MONTHS=monthIn, DAYS=dayIn, $
+  HOURS=hourIn, MINUTES=minuteIn, SECONDS=secondIn
+
+  COMPILE_OPT strictarr
+
+  ;-----------------------------------------------------------------------------
+  ; error & keyword checking
+  ON_ERROR, 2
+
+  finalSpecified = N_ELEMENTS(finalIn) GT 0
+  nParam = N_PARAMS()
+  IF (((nParam EQ 0) AND NOT finalSpecified)) THEN $
+    MESSAGE, 'Incorrect number of arguments.'
+
+  eps = (MACHAR(/DOUBLE)).eps
+
+  start = (N_ELEMENTS(startIn) GT 0) ? DOUBLE(startIn[0]) : 0d
+  final = start
+  IF (finalSpecified) THEN BEGIN
+    final = DOUBLE(finalIn[0])
+    ; Add a tiny epsilon to the final time, to reduce roundoff errors.
+    final += final*eps
+  ENDIF
+
+  ; process keyword step_size
+  IF (N_ELEMENTS(step_sizeIn) LT 1) THEN step_sizeIn = 1d
+  step_size = DOUBLE(step_sizeIn[0])  ; only use first element
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Determine the default units
+  n = {Second:N_ELEMENTS(secondIn), Minute:N_ELEMENTS(minuteIn), $
+    Hour:N_ELEMENTS(hourIn), Day:N_ELEMENTS(dayIn), $
+    Month:N_ELEMENTS(monthIn), Year:N_ELEMENTS(yearIn)}
+
+  ; process keyword units
+  ; If no units are specified, then units is equal to the unit that is
+  ; greater than the "largest" keyword. The default is days.
+  IF (N_ELEMENTS(unitsIn) LT 1) THEN BEGIN
+    ; the CASE will match the FIRST (largest) keyword
+    CASE 1 OF
+      ;   (n.Year doesn't count because YEAR just specifies starting year)
+      (n.Month GT 0):  unitsIn = 'y'
+      (n.Day GT 0):    unitsIn = 'm'
+      (n.Hour GT 0):   unitsIn = 'd'
+      (n.Minute GT 0): unitsIn = 'h'
+      (n.Second GT 0): unitsIn = 'i'
+      ELSE: unitsIn = 'd'  ; default is days
+    ENDCASE
+  ENDIF
+
+  units = STRLOWCASE(STRTRIM(unitsIn[0],2))  ; only use first element
+  ; units for minutes is "i", otherwise just use first character
+  ; (only use first 3 chars so "minute" & "minutes" both become "min")
+  units = (STRMID(units,0,3) EQ 'min') ? 'i' : STRMID(units,0,1)
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; find the starting time, either from START or from the YEAR, MONTH keywords
+  CALDAT, start, monthStart, dayStart, yearStart, $
+    hourStart, minuteStart, secondStart
+  ; defaults
+  secondArray = (n.Second EQ 0) ? secondStart : secondIn
+  minuteArray = (n.Minute EQ 0) ? minuteStart : minuteIn
+  hourArray = (n.Hour EQ 0) ? hourStart : hourIn
+  dayArray = (n.Day EQ 0) ? dayStart : dayIn
+  monthArray = (n.Month EQ 0) ? monthStart : monthIn
+  yearArray = (n.Year EQ 0) ? yearStart : yearIn
+
+  ; If an array of subintervals was passed in, along with a START,
+  ; don't just use the first element of the subintervals as the start.
+  ; Instead, use the first subinterval that is *after* the START.
+  IF (N_ELEMENTS(startIn) GT 0) THEN BEGIN
+    monthStart = (n.Month GT 0) ? MIN(monthStart > monthArray) : monthArray[0]
+    dayStart = (n.Day GT 0) ? MIN(dayStart > dayArray) : dayArray[0]
+    hourStart = (n.Hour GT 0) ? MIN(hourStart > hourArray) : hourArray[0]
+    minuteStart = (n.Minute GT 0) ? MIN(minuteStart > minuteArray) : minuteArray[0]
+    secondStart = (n.Second GT 0) ? MIN(secondStart > secondArray) : secondArray[0]
+  ENDIF ELSE BEGIN
+    monthStart = monthArray[0]
+    dayStart = dayArray[0]
+    hourStart = hourArray[0]
+    minuteStart = minuteArray[0]
+    secondStart = secondArray[0]
+  ENDELSE
+
+  ; we should now have at least 1 of each unit
+  n.Second = n.Second > 1
+  n.Minute = n.Minute > 1
+  n.Hour = n.Hour > 1
+  n.Day = n.Day > 1
+  n.Month = n.Month > 1
+
+  ; throw an error for invalid month number...
+  IF (TOTAL((monthArray LT 1) OR (monthArray GT 12)) NE 0) THEN $
+    MESSAGE, 'Value is out of range (1<=MONTH<=12).'
+
+  ; restrict day range to be >0 and <=last day of month
+  dayStart = TIMEGEN_DAY_CHECK(monthStart,dayStart,yearArray[0])
+
+  ; make sure to get the correct START in case it changed...
+  start = JULDAY(monthStart, dayStart, yearArray[0], $
+    hourStart, minuteStart, secondStart)
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Determine the number of elements and subintervals,
+  ; reset the higher intervals to have only 1 element.
+  CASE units OF
+    'y': BEGIN  ; years
+      nSub = n.Month*n.Day*n.Hour*n.Minute*n.Second
+      step_size = ROUND(step_size)
+    END
+    'm': BEGIN  ; months
+      nSub = n.Day*n.Hour*n.Minute*n.Second
+      step_size = ROUND(step_size)
+    END
+    'd': BEGIN  ; days
+      nSub = n.Hour*n.Minute*n.Second
+      n.Month = 1  ; ignore larger units
+    END
+    'h': BEGIN  ; hours
+      nSub = n.Minute*n.Second
+      n.Day = (n.Month = 1)  ; ignore larger units
+    END
+    'i': BEGIN  ; minutes
+      nSub = n.Second
+      n.Hour = (n.Day = (n.Month = 1))  ; ignore larger units
+    END
+    's': BEGIN  ; seconds
+      nSub = 1
+      n.Minute = (n.Hour = (n.Day = (n.Month = 1)))  ; ignore larger
+    END
+    ELSE: MESSAGE,'Illegal value for keyword UNITS.'
+  ENDCASE
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Find the output dimensions
+  IF (finalSpecified) THEN BEGIN  ; vector result
+    ; only return "nSub" elements if start, final, step_size conflict
+    IF ((start LT final) AND (step_size LE 0)) OR $
+      ((start GT final) AND (step_size GE 0)) THEN final = start
+    CASE units OF
+      'y': stepFactor = 365d
+      'm': stepFactor = 28d
+      'd': stepFactor = 1d
+      'h': stepFactor = 1d/24d
+      'i': stepFactor = 1d/1440d
+      's': stepFactor = 1d/86400d
+    ENDCASE
+    diff = ABS(final - start)
+    nDaysPerStep = stepFactor*ABS(step_size) $
+      + (diff EQ 0) ; avoid divide by zero
+    ; add extra nSub, in case FINAL is in the middle of subintervals
+    nElements = CEIL(diff/nDaysPerStep*nSub) + nSub
+  ENDIF ELSE BEGIN  ; (multi)dimensional result.
+    ; construct vector with list of dimensions
+    dimensions = ULON64ARR(nParam) + 1
+    SWITCH nParam OF
+      8: dimensions[7] = d8
+      7: dimensions[6] = d7
+      6: dimensions[5] = d6
+      5: dimensions[4] = d5
+      4: dimensions[3] = d4
+      3: dimensions[2] = d3
+      2: dimensions[1] = d2
+      1: dimensions[0] = d1
+    ENDSWITCH
+    ; find total number of elements
+    nElements = dimensions[0]
+    FOR i=1L,nParam-1 DO nElements = nElements*dimensions[i]
+    IF (nElements EQ 0) THEN MESSAGE, $
+      'Array dimensions must be greater than 0.'
+  ENDELSE
+  ; add extra nSub, in case START is in the middle of subintervals
+  nExpandedSize = nElements + nSub
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Construct the appropriate unit array
+  dayGen = 0d
+  nMajorInterval = (nExpandedSize + nSub - 1)/nSub
+  CASE units OF
+    'y': BEGIN  ; years
+      n.Year = nMajorInterval
+      yearArray = yearArray[0] + step_size*LINDGEN(nMajorInterval)
+    END
+    'm': BEGIN  ; months
+      n.Month = nMajorInterval
+      monthArray = monthArray[0] - 1 + step_size*LINDGEN(nMajorInterval)
+      yearArray = yearArray[0] + FLOOR(monthArray/12d)
+      IF (step_size GE 0) THEN BEGIN
+        monthArray = (monthArray MOD 12) + 1
+      ENDIF ELSE BEGIN
+        monthArray = (((monthArray MOD 12) + 12) MOD 12) + 1
+      ENDELSE
+    END
+    'd': BEGIN  ; days
+      n.Day = nMajorInterval
+      dayGen = step_size*DINDGEN(nMajorInterval)   ; special case
+    END
+    'h': BEGIN  ; hours
+      n.Hour = nMajorInterval
+      hourArray = hourArray[0] + step_size*DINDGEN(nMajorInterval)
+    END
+    'i': BEGIN  ; minutes
+      n.Minute = nMajorInterval
+      minuteArray = minuteArray[0] + step_size*DINDGEN(nMajorInterval)
+    END
+    's': BEGIN  ; seconds
+      n.Second = nMajorInterval
+      secondArray = secondArray[0] + step_size*DINDGEN(nMajorInterval)
+    END
+    ELSE: MESSAGE,'Internal error in CASE statement.'
+  ENDCASE
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Construct day fraction array
+  nHourMinuteSecond = n.Hour*n.Minute*n.Second
+  hourArray = TIMEGEN_REBIN(TEMPORARY(hourArray)-12, $
+    n.Second*n.Minute, nHourMinuteSecond, FACTOR=24d)
+  time = TEMPORARY(hourArray)
+  minuteArray = TIMEGEN_REBIN(TEMPORARY(minuteArray), $
+    n.Second, nHourMinuteSecond, FACTOR=1440d)
+  time = TEMPORARY(time) + TEMPORARY(minuteArray)
+  secondArray = TIMEGEN_REBIN(TEMPORARY(secondArray), $
+    1, nHourMinuteSecond, FACTOR=86400d)
+  time = TEMPORARY(time) + TEMPORARY(secondArray)
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Construct Julian dates
+  ; For months or years we need to check if months & days are valid,
+  ; then call JULDAY to convert to Julian dates.
+  IF ((units EQ 'y') OR (units EQ 'm')) THEN BEGIN
+    ; construct day, month, year arrays
+    nDates = (nExpandedSize+nHourMinuteSecond-1)/nHourMinuteSecond
+
+    ; are we crossing the "zero AD" line?
+    IF ((MAX(yearArray) GE 0) AND (MIN(yearArray) LE 0)) THEN BEGIN
+      ; if step_size positive, add 1 to positive years
+      ; if step_size negative, subtract 1 from negative years
+      yearArray = yearArray + $
+        ((step_size GE 0) ? (yearArray GE 0) : -1*(yearArray LE 0))
+    ENDIF
+
+    ; embed subintervals for day, month, year
+    dayArray = TIMEGEN_REBIN(TEMPORARY(dayArray), 1, nDates)
+    monthArray = TIMEGEN_REBIN(TEMPORARY(monthArray), n.Day, nDates)
+    nDayMonthSub = (units EQ 'y') ? n.Day*n.Month : n.Day
+    yearArray = TIMEGEN_REBIN(TEMPORARY(yearArray), nDayMonthSub, nDates)
+
+  ENDIF ELSE BEGIN
+    ; just take the first month, day, year as starting date
+    monthArray = monthArray[0]
+    dayArray = dayArray[0]
+    yearArray = yearArray[0]
+  ENDELSE
+
+  ; make sure maximum day number is within range for each month
+  dayArray = TIMEGEN_DAY_CHECK( monthArray, dayArray, yearArray)
+
+  ; find the Julian date values
+  date = TEMPORARY(dayGen) + $
+    JULDAY(TEMPORARY(monthArray),TEMPORARY(dayArray),TEMPORARY(yearArray))
+
+
+  ; combine dates & times by expanding each of them to correct size
+  time = TIMEGEN_REBIN(TEMPORARY(time), 1, nExpandedSize)
+  date = TIMEGEN_REBIN(TEMPORARY(date), nHourMinuteSecond, nExpandedSize)
+
+  ; Add a small offset so we get the hours, minutes, & seconds back correctly
+  ; if we convert the Julian dates back. This offset is proportional to the
+  ; Julian date, so small dates (a long, long time ago) will be "more" accurate.
+  epsArray = date*eps > eps    ; if date=0 then just use eps
+  times = TEMPORARY(date) + TEMPORARY(time) + TEMPORARY(epsArray)
+
+
+
+  ;-----------------------------------------------------------------------------
+  ; Restrict range to lie between START and FINAL
+  epsStart = start*eps > eps  ; avoid roundoff errors...
+  timeStart = times[0:nSub]
+  ; depends upon whether you are stepping forward in time or backwards.
+  startIndex = (step_size GE 0) ? $
+    MIN(WHERE(timeStart GE (start-epsStart))) : $
+    MIN(WHERE(timeStart LE (start+epsStart)))
+  startIndex = startIndex > 0
+  finalIndex = startIndex + nElements - 1
+
+  IF (finalSpecified) THEN BEGIN
+    epsFinal = final*eps > eps
+    ; depends upon whether you are stepping forward in time or backwards.
+    CASE 1 OF
+      (step_size EQ 0): finalIndex = startIndex
+      (step_size GT 0): finalIndex = $
+        MAX(WHERE(times LE (final+epsFinal)))
+      ELSE: finalIndex = MAX(WHERE(times GE (final-epsFinal)))
+    ENDCASE
+    finalIndex = finalIndex > startindex
+    dimensions = finalIndex - startIndex + 1
+  ENDIF
+
+  times = times[startIndex:finalIndex]
+  IF (nParam GT 1) THEN times = REFORM(TEMPORARY(times), dimensions)
+
+  RETURN, times
+
+END
+
+
+FUNCTION Get_MapExtent_from_SMLfile, file
+  COMPILE_OPT idl2
+
+  OPENR, lun, file, /get_lun
+
+  geolocations = !NULL
+
+  WHILE ~EOF(lun) DO BEGIN
+    tmp = ''
+    READF, lun, tmp
+    tmp = STRTRIM(tmp, 2)
+    IF tmp.StartsWith('<ValueDouble ID = "', /fold_case) THEN BEGIN
+      ;tmp='<ValueDouble ID = "0">29.615488348851734</ValueDouble>'
+      tmp_array = STRSPLIT(tmp, '<>', /extract)
+      geolocations = [geolocations, tmp_array[1]]
+    ENDIF
+
+    IF N_ELEMENTS(geolocations) EQ 8 THEN BREAK
+  ENDWHILE
+
+  FREE_LUN, lun
+
+  geolocations = DOUBLE(REFORM(geolocations, 4,2))
+  Lat = geolocations[*,0]
+  Lon = geolocations[*,1]
+
+  ;获取范围
+  MapExtent = [[MAX(Lat), MIN(Lon)],[MIN(Lat), MAX(Lon)]]
+
+  RETURN, MapExtent
+END
+
+
+;PRO GSF_Directory_Delete, input_dir
+;  COMPILE_OPT idl2
+;  ;如果文件夹不存在
+;  IF ~FILE_TEST(input_dir, /directory) THEN RETURN
+;
+;  ;循环删除
+;  WHILE (FILE_TEST(input_dir, /directory)) DO BEGIN
+;    temp_files = FILE_SEARCH(input_dir, '*', count=count)
+;    FILE_DELETE, temp_files, /quiet, /allow_nonexistent
+;    FILE_DELETE, input_dir, /quiet, /allow_nonexistent
+;
+;    ;删除之后，判断下是否有文件被删除。如果没有新文件被删除，说明已经无法删除。
+;    temp_files = FILE_SEARCH(input_dir, '*', count=new_count)
+;    IF new_count EQ count THEN RETURN
+;  ENDWHILE
+;END
+
+
+FUNCTION GSFLayerStackRaster, input_rasters
+  COMPILE_OPT idl2
+  e=envi(/current)
+
+  ;临时镶嵌一个虚拟栅格，用于计算波段组合后的格网
+  msraster = ENVIMosaicRaster(input_rasters)
+  PixelSize = msraster.SPATIALREF.PIXEL_SIZE
+  CoordSysString = msraster.SPATIALREF.COORD_SYS_STR
+  NumRows = msraster.NROWS
+  NumCols = msraster.NCOLUMNS
+  TiePointMap = msraster.SPATIALREF.TIE_POINT_MAP
+  TiePointPixel = msraster.SPATIALREF.TIE_POINT_PIXEL
+  CoordSys = ENVICoordSys(COORD_SYS_STR=CoordSysString)
+  GridDefGeo = ENVIGridDefinition(CoordSys, $
+    PIXEL_SIZE=PixelSize,                   $
+    NROWS=NumRows, NCOLUMNS=NumCols,        $
+    TIE_POINT_MAP=TiePointMap,              $
+    TIE_POINT_PIXEL=TiePointPixel)
+
+  msraster.Close
+
+  ;波段组合
+  layerStack = ENVILayerStackRaster(input_rasters, $
+    GRID_DEFINITION=GridDefGeo)
+
+  RETURN, layerStack
+END
+
+;将HASH写出为json文件
+PRO GSF_WriteHASH2JSON, input_hash, json_file=json_file
+  json_string = JSON_SERIALIZE(input_hash)
+  OPENW,lun,json_file,/get_lun
+  PRINTF,lun,json_string
+  FREE_LUN,lun
+END
+
+;+
+; :Description:
+;    使用此程序可以删除file、raster等
+;    避免数据在ENVI中已打开，出现被占用情况而无法删除
+;
+;    file参数可以是文件、文件夹、ENVIRaster、ENVIVector对象。
+;
+; :Author: duhj@esrichina.com.cn
+;
+; :Date: 2018-3-15 15:24:45
+;-
+PRO GSF_File_Delete_Enhanced, file
+  COMPILE_OPT idl2
+
+  IF ~N_ELEMENTS(file) THEN RETURN
+
+  ;支持数组
+  IF N_ELEMENTS(file) GT 1 THEN BEGIN
+    FOREACH element, file DO GSF_File_Delete_Enhanced, element
+    RETURN
+  ENDIF
+
+  CASE TYPENAME(file) OF
+    'STRING': BEGIN
+
+      ;如果是路径，则删除里边每一个文件，并删除路径
+      is_dir = FILE_TEST(file, /directory)
+      IF is_dir THEN BEGIN
+        tmpfiles = FILE_SEARCH(file, '*', count=count)
+        IF count GT 0 THEN GSF_File_Delete_Enhanced, tmpfiles
+        FILE_DELETE, file, /quiet, /allow_nonexistent, /recursive
+        RETURN
+      ENDIF
+
+      ;如果是文件
+      FILE_DELETE, file, /quiet, /allow_nonexistent
+      IF ~FILE_TEST(file) THEN RETURN
+      e=envi(/current)
+      tmpraster = e.OpenRaster(file, error=error)
+      IF error EQ '' THEN BEGIN
+        ;如果打开成功，则记录文件，关闭，删除
+        tmpfiles = [tmpraster.URI, tmpraster.AUXILIARY_URI]
+        tmpraster.Close
+        FILE_DELETE, tmpfiles, /quiet, /allow_nonexistent
+      ENDIF
+    END
+    'ENVIRASTER': BEGIN
+      ;如果是ENVIRaster
+      tmpfiles = [file.URI, file.AUXILIARY_URI]
+      file.Close
+      FILE_DELETE, tmpfiles, /quiet, /allow_nonexistent
+    END
+    'ENVIVECTOR': BEGIN
+      ;如果是ENVIVector
+      tmpfiles = [file.URI, file.AUXILIARY_URI]
+      file.Close
+      FILE_DELETE, tmpfiles, /quiet, /allow_nonexistent
+    END
+    ELSE:
+  ENDCASE
+END
+
+
+PRO GSF_Delete_envitempfiles
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+  cd, current=jobdir
+  tmpfiles = FILE_SEARCH(jobdir,'*envitempfile*', count=count)
+  IF count GT 0 THEN GSF_File_Delete_Enhanced, tmpfiles
+
+  ;删除.idl文件路径
+  FILE_DELETE, jobdir+PATH_SEP()+'.idl', /recursive, /quiet, /allow_nonexistent
+  ;FILE_DELETE, jobdir+PATH_SEP()+'incremental', /recursive, /quiet, /allow_nonexistent
+  ;FILE_DELETE, jobdir+PATH_SEP()+'work', /recursive, /quiet, /allow_nonexistent
+END
+
+
+PRO GSF_Close_VirtualRasters, rasters
+  IF ~N_ELEMENTS(rasters) THEN RETURN
+  FOREACH element, rasters DO BEGIN
+    IF OBJ_VALID(element) THEN element.Close, error=err
+  ENDFOREACH
+END
+
+
+PRO GSF_FileHasBeenProcessed, gsf_progress, $
+  json_file=json_file, out_options=out_options
+
+  ON_ERROR, 2
+  IF OBJ_VALID(gsf_progress) THEN gsf_progress.Finish
+
+  IF KEYWORD_SET(json_file) THEN BEGIN
+    out_options = JSON_PARSE(json_file)
+    out_options += ORDEREDHASH('duplicate_task', 1)
+  ENDIF ELSE BEGIN
+    MESSAGE, 'The input file has been processed.', /noname
+  ENDELSE
+END
+
+
+;判断相同参数的任务结果是否已经入库
+PRO GSF_CheckSameJobProcessStatus, out_options=out_options, $
+  out_json_file=out_json_file, _extra = ex
+
+  ;参数转换为HASH
+  all_options = ORDEREDHASH(ex)
+  ;获取当前输入参数名
+  all_paranames = all_options.Keys()
+  in_options = ORDEREDHASH()  &   cmp_paranames = !NULL
+  FOREACH element, all_paranames DO BEGIN
+    IF element.Contains('out',/fold_case) THEN CONTINUE
+    in_options+=ORDEREDHASH(element,all_options[element])
+    cmp_paranames = [cmp_paranames, element]
+  ENDFOREACH
+  n_cmp_paranames = N_ELEMENTS(cmp_paranames) ;比对的参数个数
+
+  ;返回后用于输出本次输入参数信息
+  out_options = ORDEREDHASH('inputParameters', in_options)
+  out_json_file = !NULL
+
+  ;获取结果json文件搜索字符串
+  GSF_Get_Output_Filename, input_file=all_options['INPUT_FILE'],  $ ;输入文件名
+    file_extension=all_options['OUT_SEARCH_EXTENSION'],               $
+    output_path=all_options['OUTPUT_PATH'],                       $ ;当设置为same时，输出路径与输入路径一致
+    output_file=json_search_string
+
+  ;检索已经生成的json文件，与本次参数进行比对
+  existing_jsonfiles = FILE_SEARCH(json_search_string+'*.json', count=n_jsonfiles)
+  IF n_jsonfiles GE 1 THEN BEGIN
+
+    ;开始对比每一个json文件
+    FOREACH element, existing_jsonfiles DO BEGIN
+      element_hash = JSON_PARSE(element)
+      IF ~element_hash.HasKey('inputParameters') THEN CONTINUE
+      existing_options = element_hash['inputParameters']
+      ;如果参数比对一致，并且dat和hdr文件存在，则返回并提示错误消息
+      dat_file = element.Replace('.json','.dat')
+      hdr_file = element.Replace('.json','.hdr')
+      IF N_ELEMENTS(existing_options EQ in_options) EQ n_cmp_paranames && $
+        FILE_TEST(dat_file) && FILE_TEST(hdr_file) THEN BEGIN
+        out_options = !NULL
+        out_json_file = element
+        RETURN
+      ENDIF
+    ENDFOREACH
+  ENDIF
+END
+
+
+
+;获取元数据信息，目前包含时间、含云量，返回为orderedhash结构
+PRO GSF_GetRasterMetadata, input_raster=input_raster,    $
+  product_type=product_type, sensor_type=sensor_type,    $
+  acquisition_time=acquisition_time, $
+  inherit_jsonfile=inherit_jsonfile, $
+  json_file=json_file, out_options=out_options
+
+  COMPILE_OPT idl2
+  IF ~KEYWORD_SET(out_options) THEN out_options=ORDEREDHASH()
+
+  ;记录json文件，保存json_file结果文件
+  IF KEYWORD_SET(json_file) THEN $
+    out_options += ORDEREDHASH('json_file',json_file)
+
+  md = input_raster.Metadata
+
+  ;暂时获取日期和传感器类型，继承自inherit_jsonfile
+  IF KEYWORD_SET(inherit_jsonfile) && FILE_TEST(inherit_jsonfile) THEN BEGIN
+
+    inherit_hash = JSON_PARSE(inherit_jsonfile)
+
+    acquisition_time = inherit_hash['acquisition_time']
+    sensor_type = inherit_hash['sensor_type']
+
+  ENDIF ELSE BEGIN
+
+    ;获取时间
+    oTime = input_raster.time
+    IF ~KEYWORD_SET(acquisition_time) THEN acquisition_time = 'Unknown'
+    IF oTime.ACQUISITION NE !NULL THEN BEGIN
+      acquisition_time = oTime.ACQUISITION ;"2014-01-22T03:05:08Z"
+      ; acquisition_time = STRJOIN((STRSPLIT(acquisition_time, 'TZ', /extract)),' ')
+      acquisition_time = (STRSPLIT(acquisition_time, 'TZ', /extract))[0]
+    ENDIF
+
+    ;传感器类型
+    IF KEYWORD_SET(sensor_type) THEN BEGIN
+    ENDIF ELSE IF md.HasTag('SENSOR TYPE') THEN BEGIN
+      sensor_type = md['SENSOR TYPE']
+    ENDIF ELSE BEGIN
+      sensor_type = 'Unknown'
+    ENDELSE
+
+  ENDELSE
+
+  ;处理日期
+  produce_time = STRTRIM(bin_date(SYSTIME()),2)
+  produce_time[1:*] = STRING(produce_time[1:*], format='(I02)')
+  produce_time = STRJOIN(produce_time[0:2],'-');+' '+STRJOIN(produce_time[3:*],':')
+
+  out_options += ORDEREDHASH('acquisition_time',acquisition_time, $
+    'produce_time',produce_time,'sensor_type',sensor_type)
+
+  ;获取含云量
+  ;  cloud_cover = 'null'
+  ;  IF md.HasTag('CLOUD COVER') THEN cloud_cover = md['CLOUD COVER']
+  ;  cloud_cover = STRTRIM(cloud_cover,2)
+  ;out_options += ORDEREDHASH('cloud_cover',cloud_cover, $
+  ;    'nbands',STRTRIM(raster.nbands,2))
+
+  ;产品类型
+  IF KEYWORD_SET(product_type) THEN $
+    out_options += ORDEREDHASH('product_type',product_type)
+
+  ;将结果写到json文件中
+  IF KEYWORD_SET(json_file) THEN $
+    GSF_WriteHASH2JSON, out_options, json_file=json_file
+END
+
+
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;求集合的并集
+; copy From DAVID's Code  ^_^
+;
+FUNCTION SETUNION, a, b
+  ;
+  COMPILE_OPT StrictArr
+  IF N_ELEMENTS(a) EQ 0 THEN RETURN, b    ;A union NULL = a
+  IF N_ELEMENTS(b) EQ 0 THEN RETURN, a    ;B union NULL = b
+  RETURN, WHERE(HISTOGRAM([a,b], OMin = omin)) + omin ; Return combined set
+END
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;
+;去除2维数组中重复的元素
+;
+; 2010年3月25日
+; Write By DYQ
+;
+FUNCTION UNIQARRAY, inArray
+  ;
+  num = N_ELEMENTS(inArray[0,*])
+  xArray = REFORM(inArray[0,*])
+  yArray = REFORM(inArray[1,*])
+  ;
+  xUniq = UNIQ(xArray(SORT(xArray)))
+  yUniq = UNIQ(yArray(SORT(yArray)))
+  ;
+  RETURN, inArray[*,SETUNION(xUniq,yUniq)]
+
+END
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;计算两个点的距离,XY水平面
+;
+; 2008-4-28
+; Write By DYQ
+;其实可以用 DISTANCE_MEASURE 函数，没办法，写好了才发现IDL自带o(∩_∩)o
+;
+FUNCTION CALDISTANCE, point1, point2
+  ;
+  point1 = point1*1.
+  point2 = point2*1.
+  RETURN, SQRT((point1[0]-point2[0])^2+(point1[1]-point2[1])^2)
+END
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;计算点到直线的距离
+;
+;Write By DYQ
+;其实可以用 PNT_LINE 函数，没办法，写好了才发现IDL自带o(∩_∩)o
+;
+FUNCTION CALDISTANCEPTOLINE, point0,linePos1,linePos2
+
+  a = CALDISTANCE(point0,linePos1)
+  b = CALDISTANCE(point0,linePos2);SQRT((point[0]-linePos2[0])^2+(point[1]-linePos2[1])^2)
+
+  c = CALDISTANCE(linePos1,linePos2);SQRT((linePos2[0]-linePos1[0])^2+(linePos2[1]-linePos1[1])^2)
+
+  p = (a+b+c)*0.5
+  s = SQRT(p*(p-a)*(p-b)*(p-c))
+
+  RETURN, s*2/c
+END
+
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;计算两直线的交点
+;2008-9-27
+;Write By DYQ
+;
+; 输入
+; P1:直线1的起点坐标--- P2:直线1的终点坐标
+; P1S:直线2的起点坐标--- P2S:直线2的终y点坐标
+; 相交则返回交点，不相交则返回-1
+; Modified By DYQ
+; 2008-10-29 --增加了p1、p2及P1S、P2S重合的判断
+;Example:
+;   直线: [-1,-1],[1,1]
+;   直线：[1,0],[0,1]
+;   point = Cal2linesintersectpoint([-1,-1],[1,1],[1,0],[0,1])
+
+FUNCTION CAL2LINESINTERSECTPOINT, P1,P2,P1S,P2S
+  ;
+  COMPILE_OPT IDL2
+  ;如果线1点重合了
+  IF ARRAY_EQUAL(P1, P2) THEN BEGIN
+    IF ARRAY_EQUAL(P1S, P2S ) THEN BEGIN
+      IF P1 EQ P2 THEN RETURN,P1
+      RETURN, -1
+    ENDIF ELSE BEGIN
+      IF CALDISTANCEPTOLINE(P1,P1S,P2S) EQ 0 THEN RETURN, P1
+      RETURN,-1
+    ENDELSE
+    ;线1的点不重合
+  ENDIF ELSE BEGIN
+    IF ARRAY_EQUAL(P1S ,P2S) THEN BEGIN
+      RETURN, P1S
+    ENDIF ELSE BEGIN
+      ;如果第一条直线垂直x轴
+      IF (P1[0]-P2[0]) EQ 0 THEN BEGIN
+        ipX = p1[0];
+        ;第二条也垂直
+        IF (P1S[0]-P2S[0]) EQ 0 THEN BEGIN
+          ;不相交
+          RETURN, -1
+        ENDIF ELSE BEGIN
+          ;
+          k2 = FLOAT(P1S[1]-P2S[1])/(P1S[0]-P2S[0])
+          b2 = FLOAT(P1S[0]*P2S[1]-P2S[0]*P1S[1])/(P1S[0]-P2S[0])
+          ;
+          ipY = k2*ipX+b2
+          RETURN,[ipX,ipY]
+        ENDELSE
+        ;第二条直线垂直X轴
+      ENDIF ELSE IF (P1S[0]-P2S[0]) EQ 0 THEN BEGIN
+        ipX = p2s[0];
+        k1 = FLOAT(P1[1]-P2[1])/(P1[0]-P2[0])
+        b1 = FLOAT(P1[0]*P2[1]-P2[0]*P1[1])/(P1[0]-P2[0])
+        ipY = k1*ipX+b1
+        RETURN,[ipX,ipY]
+
+        ;都不垂直
+      ENDIF ELSE BEGIN
+        k1 = FLOAT(P1[1]-P2[1])/(P1[0]-P2[0])
+        b1 = FLOAT(P1[0]*P2[1]-P2[0]*P1[1])/(P1[0]-P2[0])
+        ;
+        k2 = FLOAT(P1S[1]-P2S[1])/(P1S[0]-P2S[0])
+        b2 = FLOAT(P1S[0]*P2S[1]-P2S[0]*P1S[1])/(P1S[0]-P2S[0])
+        ;如果都垂直Y轴
+        IF (K2 EQ 0) AND(K1 EQ 0) THEN RETURN,-1
+        ipX = (b2-b1)/(k1-k2)
+        ipY = (k1*b2-k2*b1)/(k1-k2)
+        RETURN,[ipX,ipY]
+      ENDELSE
+    ENDELSE
+  ENDELSE
+  ;
+END
+
+;≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌≌
+;
+;
+;计算平面上直线是否与多边形相交，有交点可返回
+;2010年3月25日
+; Write By DYQ
+;
+;调用格式result = CalLineInPolygon(linePoints, polyPoints) ;
+;LinePoints: 两个点的二维坐标[2,2]，否则返回-1;
+;PolyPoints: 多边形点的二维坐标[2,n]，否则返回-1
+;
+FUNCTION CALLINEINPOLYGON, linePoints, polyPoints
+  COMPILE_OPT idl2
+  ;
+  IF ARRAY_EQUAL(SIZE(inPoints,/dimension), [2,2]) THEN RETURN,-1
+  ;点个数
+  pointNum = (SIZE(polyPoints,/dimension))[1]
+  ;相交标识
+  sign = -1
+  ipoints = [0,0]
+  ;循环求解
+  FOR i=0, pointNum -1 DO BEGIN
+    ;
+    point = CAL2LINESINTERSECTPOINT(linePoints[*,0], $
+      linePoints[*,1], polyPoints[*,i],polyPoints[*,(i+1) MOD pointNum])
+    IF N_ELEMENTS(point) GT 1 THEN BEGIN
+      ipoints = [[iPoints],[REFORM(point)]]
+      sign = 1
+    ENDIF
+  ENDFOR
+  ;
+  IF sign EQ -1 THEN RETURN, sign $
+  ELSE result = UNIQARRAY(iPoints[*,1:N_ELEMENTS(iPoints[0,*])-1])
+  ;判断交点是否在多边形内
+  ;
+  oROI = OBJ_NEW('IDLanROI', polyPoints)
+
+  conArr = [0,0]
+  FOR i=0, N_ELEMENTS(result)/2-1 DO BEGIN
+    ;
+    psign= oROI->CONTAINSPOINTS(result[*,i])
+    ;有在多边形内的点
+    IF psign NE 0 THEN BEGIN
+      conArr = [[conArr], [result[*,i]]]
+    ENDIF
+  ENDFOR
+  OBJ_DESTROY,oROI
+  ;
+  IF N_ELEMENTS(conArr)/2 EQ 1 THEN RETURN, -1 ELSE RETURN,conArr[*,1:N_ELEMENTS(conArr)/2-1]
+END
+
+;计算得到多光谱或全色的角点
+PRO GSF_GetFourCoor, raster, coord
+  ;
+  ;    file = 'F:\国家测绘局测试数据\资源3号\1 正射校正结果\ZY3_01a_mynnavp_884148_20131026_105447_0007_SASMAC_CHN_sec_rel_001_1310280963_rpcortho.dat'
+  COMPILE_OPT idl2
+  fid = ENVIRasterToFID(raster)
+  ;  ENVI_OPEN_FILE, file, r_fid=fid
+  IF fid EQ -1 THEN RETURN
+  ENVI_FILE_QUERY, fid, dims=dims, ns=ns, nl=nl, nb=nb
+  ;获取左上角点的坐标
+  FOR i=0L,nl-1 DO BEGIN
+    tmpDIMS = [-1, 0, ns-1, i, i]
+    ;获取第i行的数据
+    tmpDATA = ENVI_GET_DATA(fid=fid, dims=tmpDIMS, pos=0)
+    ;找到第一个不为0的像元
+    idx = WHERE(tmpDATA NE 0)
+    IF idx[0] EQ -1 THEN CONTINUE
+    ;
+    leftup = [idx[0], i]
+    BREAK
+  ENDFOR
+  ;PRINT, leftup
+
+  ;获取左下角点的坐标
+  FOR i=0L,ns-1 DO BEGIN
+    tmpDIMS = [-1, i, i, 0, nl-1]
+    ;获取第i行的数据
+    tmpDATA = ENVI_GET_DATA(fid=fid, dims=tmpDIMS, pos=0)
+    ;找到第一个不为0的像元
+    idx = WHERE(tmpDATA NE 0)
+    IF idx[0] EQ -1 THEN CONTINUE
+    ;
+    leftdown = [i, idx[-1]]
+    BREAK
+  ENDFOR
+  ;PRINT, leftdown
+
+  ;获取右上角点的坐标
+  FOR i=ns-1,0L,-1 DO BEGIN
+    tmpDIMS = [-1, i, i, 0, nl-1]
+    ;获取第i行的数据
+    tmpDATA = ENVI_GET_DATA(fid=fid, dims=tmpDIMS, pos=0)
+    ;找到第一个不为0的像元
+    idx = WHERE(tmpDATA NE 0)
+    IF idx[0] EQ -1 THEN CONTINUE
+    ;
+    rightup = [i, idx[0]]
+    BREAK
+  ENDFOR
+  ;PRINT, rightup
+
+
+  ;获取右下角点的坐标
+  FOR i=nl-1,0L,-1 DO BEGIN
+    tmpDIMS = [-1, 0, ns-1, i, i]
+    ;获取第i行的数据
+    tmpDATA = ENVI_GET_DATA(fid=fid, dims=tmpDIMS, pos=0)
+    ;找到第一个不为0的像元
+    idx = WHERE(tmpDATA NE 0)
+    IF idx[0] EQ -1 THEN CONTINUE
+    ;
+    rightdown = [idx[-1], i]
+    BREAK
+  ENDFOR
+  ;PRINT, rightdown
+
+  ;点的顺序
+  ;0 - 1
+  ;|   |
+  ;3 - 2
+  ;转换为地理坐标
+  coordFile = [[leftup],[rightup],[rightdown],[leftdown]]
+  ENVI_CONVERT_FILE_COORDINATES, fid, $
+    coordFile[0,*], coordFile[1,*], xmap, ymap, /to_map
+
+
+  ;转换为经纬度
+  oProj = ENVI_PROJ_CREATE(/GEOGRAPHIC)
+  iProj = ENVI_GET_PROJECTION(fid = fid)
+
+  ENVI_CONVERT_PROJECTION_COORDINATES,  $
+    xmap, ymap, iProj,    $
+    oXgeo, oYgeo, oProj
+
+  coord = [oXgeo, oYgeo]
+
+END
+
+
+;获取重叠区的角点
+;输入多光谱和全色文件，返回重叠区角点
+
+PRO GSF_GetOverlayCoord, coordPan, coordMul, OverlayCoord
+  ;
+  COMPILE_OPT idl2
+
+  IF N_PARAMS() NE 3 THEN RETURN
+
+  ;  GetFourCoor, pan, coordPan
+  ;  GetFourCoor, mul, coordMul
+  ;  PRINT, coordPan
+  ;  PRINT, ''
+  ;  PRINT, coordMul
+  ;  PRINT, ''
+  ;计算左上角
+  ;  CAL2LINESINTERSECTPOINT, L1Start, L1End, L2Start, L2End
+  L1Start = coordPan[*,0]
+  L1End = coordPan[*,1]
+  L2Start = coordMul[*,0]
+  L2End = coordMul[*,3]
+  Point1 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  L1Start = coordPan[*,0]
+  L1End = coordPan[*,3]
+  L2Start = coordMul[*,0]
+  L2End = coordMul[*,1]
+  Point2 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  Point3 = coordPan[*,0]
+  Point4 = coordMul[*,0]
+  ;选出Point四个点中右下角的点，即Y最小
+  Tmp = [[Point1],[Point2],[Point3],[Point4]]
+  idx = (SORT(tmp[1,*]))[0]
+  ;  Tmp = double_sort(Tmp,1,2)
+  leftup = Tmp[*,idx]
+
+  ;计算右上角
+  L1Start = coordPan[*,0]
+  L1End = coordPan[*,1]
+  L2Start = coordMul[*,1]
+  L2End = coordMul[*,2]
+  Point1 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  L1Start = coordPan[*,1]
+  L1End = coordPan[*,2]
+  L2Start = coordMul[*,0]
+  L2End = coordMul[*,1]
+  Point2 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  Point3 = coordPan[*,1]
+  Point4 = coordMul[*,1]
+  ;选出Point四个点中左下角的点，即X最小
+  Tmp = [[Point1],[Point2],[Point3],[Point4]]
+  idx = (SORT(tmp[0,*]))[0]
+  ;  Tmp = double_sort(Tmp,0,0)
+  rightup = tmp[*,idx]
+
+  ;计算右下角
+  L1Start = coordPan[*,1]
+  L1End = coordPan[*,2]
+  L2Start = coordMul[*,2]
+  L2End = coordMul[*,3]
+  Point1 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  L1Start = coordPan[*,2]
+  L1End = coordPan[*,3]
+  L2Start = coordMul[*,1]
+  L2End = coordMul[*,2]
+  Point2 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  Point3 = coordPan[*,2]
+  Point4 = coordMul[*,2]
+  ;选出Point四个点中左下角的点，即Y最大
+  Tmp = [[Point1],[Point2],[Point3],[Point4]]
+  idx = (SORT(tmp[1,*]))[-1]
+  ;  tmp = double_sort(tmp,1,3)
+  rightdown = tmp[*,idx]
+
+
+  ;计算左下角
+  L1Start = coordPan[*,0]
+  L1End = coordPan[*,3]
+  L2Start = coordMul[*,2]
+  L2End = coordMul[*,3]
+  Point1 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  L1Start = coordPan[*,2]
+  L1End = coordPan[*,3]
+  L2Start = coordMul[*,0]
+  L2End = coordMul[*,3]
+  Point2 = CAL2LINESINTERSECTPOINT(L1Start, L1End, L2Start, L2End)
+  Point3 = coordPan[*,3]
+  Point4 = coordMul[*,3]
+  ;选出Point四个点中左下角的点，即X最大
+  Tmp = [[Point1],[Point2],[Point3],[Point4]]
+  idx = (SORT(tmp[0,*]))[-1]
+  ;  tmp = double_sort(tmp,0,1)
+  leftdown = tmp[*,idx]
+
+  OverlayCoord = [[leftup],[rightup],[rightdown],[leftdown]]
+
+END
+
+
+PRO GSF_GetOverlayShapefile, raster1, raster2, shp_file=shp_file
+  COMPILE_OPT idl2
+  e=envi(/current)
+
+  IF ~KEYWORD_SET(shp_file) THEN shp_file=e.GetTemporaryFilename('shp')
+
+  ;获取有效区域矢量
+  GSF_GetFourCoor, raster1, coord1
+  GSF_GetFourCoor, raster2, coord2
+  GSF_GetOverlayCoord, coord1, coord2, OverlayCoord
+  FirstPoint = OverlayCoord[*,0]
+  OverlayCoord = [[OverlayCoord], [FirstPoint]]
+
+  Proj = ENVI_PROJ_CREATE(/GEOGRAPHIC)
+  ;新建Shapefile，为polygon类型
+  oShp=OBJ_NEW('IDLffShape', shp_file, /UPDATE, ENTITY_TYPE=5)
+  ;创建新实体的结构体 - Create structure for new entity
+  entNew = {idl_shape_entity}
+
+  ;定义实体的值 - Define the values for the new entity
+  ;就是定义了一个点，经纬度为[-104,39]
+  entNew.SHAPE_TYPE = 5  ;实体类型为1， 即Point
+  entNew.VERTICES = PTR_NEW(OverlayCoord)
+  entNew.N_VERTICES = 5 ; take out of example, need as workaround
+
+  oShp.PutEntity, entNew
+  OBJ_DESTROY, oShp
+
+  prjFile = FILE_DIRNAME(shp_file) + PATH_SEP() + $
+    FILE_BASENAME(shp_file,'.shp')+'.prj'
+  OPENW, lun, prjFile, /GET_LUN
+  prjstr = Proj.PE_COORD_SYS_STR
+  PRINTF, lun, prjstr
+  FREE_LUN, lun
+END
+
+;+
+; :Description:
+;
+;-
+FUNCTION GSF_GetFileExtension, file, basename=basename
+  COMPILE_OPT idl2
+
+  basename = FILE_BASENAME(file)
+  dot_index = basename.LastIndexOf('.')
+  IF dot_index EQ -1 THEN RETURN, ''
+
+  file_ext = basename.Substring(dot_index)
+  basename = FILE_BASENAME(file, file_ext)
+  RETURN, file_ext
+END
+
+
+PRO GSF_GetGSFConfig, gsf_ip=gsf_ip, gsf_port=gsf_port,     $
+  gsf_pngpath=gsf_pngpath, config_json_uri=config_json_uri, $
+  jobid=jobid
+
+  ;cd, 'C:\GSF22\workspace\693'
+  ;获取当前目录
+  cd, current=curPath
+
+  gsf_ip='localhost'
+  gsf_port='9191'
+  gsf_pngpath=curpath
+  jobid = FILE_BASENAME(curpath)
+
+  ;---------------GSF2.2方法，可以获取配置文件路径，但是GSF2.3需要修改配置文件-----------------
+  ;获取GSF服务
+  gsf_server = ESE.GetServer('localhost', 9191)
+  IF gsf_server EQ !NULL THEN RETURN ;如果服务未启动
+  gsf_info = gsf_server.About()
+
+  ;首先判断如果没有configFile，需要在 GSF 2.x Console 中运行如下命令
+  ;node updateConfig.js config.json --set  requestHandlers[type:gsf-info-request-handler].showAllProperties=true
+  ;node service restart
+
+  IF ~(gsf_info['configuration']).HasKey('configFile') THEN BEGIN
+    MESSAGE, ['Please run the following command in GSF (Console Mode): ', $
+      'node updateConfig.js config.json --set requestHandlers[type:gsf-info-request-handler].showAllProperties=true', $
+      'node service restart'], /noname
+  ENDIF
+
+  ;继续获取config.json文件路径
+  config_json_uri = (gsf_info['configuration'])['configFile']   ;C:\GSF22\config.json
+
+  ;获取GSF服务器IP地址
+  gsf_ip = (gsf_info['configuration'])['externalAddress'] ;['jobManager'])['redisHost']
+  gsf_port = STRTRIM((gsf_info['configuration'])['port'],2)
+  ;-----------------------------------------------------------------------
+
+  ;---------------GSF2.3-----------------
+  ;需要在GSF 2.3 Console中运行如下命令
+  ;node updateConfig.js config.json --set  requestHandlers[type:gsf-info-request-handler].showAllProperties=true
+  ;node service restart
+  ;-----------------------------------------------------------------------
+
+  ;获取PNG路径
+  jobid = FILE_BASENAME(curPath)
+  gsf_pngpath = FILEPATH(jobid, root_dir=FILE_DIRNAME(config_json_uri),$
+    subdirectory=['help','thumbnails'])
+  IF ~FILE_TEST(gsf_pngpath,/directory) THEN FILE_MKDIR, gsf_pngpath
+
+  ;FILEPATH('config.json',root_dir=FILE_DIRNAME(FILE_DIRNAME(curPath)))
+  ;
+  ;  IF FILE_TEST(config_json_uri) THEN BEGIN
+  ;    json_hash = JSON_PARSE(config_json_uri)
+  ;    gsf_ip = (json_hash['jobManager'])['redisHost']
+  ;    gsf_port = STRTRIM(json_hash['port'],2)
+  ;  ENDIF
+END
+
+
+;+
+; :DESCRIPTION:
+;   函数名                       功能                                  波段运算调用公式
+;   NaN2Zero    修改NaN为0值                NaN2Zero(b1)
+;   Zero2NaN    修改0值为NaN      Zero2NaN(b1)
+;   DN2NaN      修改指定值为NaN    DN2NaN(b1,DN)
+;   NaN2DN      修改NaN为指定值           NaN2DN(b1,DN)
+;
+; :AUTHOR: duhj@esrichina.com.cn
+;
+; :Date: 2013-8-5
+;-
+;修改NaN为0值
+FUNCTION GSF_NaN2Zero, b1
+  b1 = FINITE(b1, /nan)*(-9999) OR (~FINITE(b1, /nan))*b1
+  b1 = (b1 NE -9999)*b1
+  RETURN, (b1 EQ 0)*0 + (b1 NE 0)*b1
+END
+
+;修改0值为NaN
+FUNCTION GSF_Zero2NaN, b1
+  RETURN, FLOAT(b1)*b1/b1
+END
+
+;修改指定值为NaN
+FUNCTION GSF_DN2NaN, b1, DN
+  RETURN, b1*FLOAT(b1 NE DN)/(b1 NE DN)
+END
+
+;修改NaN为指定值
+FUNCTION GSF_NaN2DN, b1, DN
+  RETURN, FINITE(b1, /nan)*(DN) OR (~FINITE(b1, /nan))*b1
+END
+
+
+
+
+
+
+
+;+
+; :Description:
+;    文件压缩服务。
+;    支持传入ENVI格式（.dat）文件，自动压缩 .dat 和 .hdr 文件
+;    支持传入多个文件（字符串数组）进行压缩
+;    支持传入文件夹
+;
+;    如果GSF服务器为 Windows 系统，则压缩为 zip
+;    如果GSF服务器为 Linux 系统，则压缩为 tar.gz
+;
+; :Keywords:
+;    input_file   - 输入文件
+;    output_path  - 压缩路径（可选）：不需要设置，默认为job文件夹
+;    zipfile_url  - 返回压缩包URL
+;
+; :Author: duhj@esrichina.com.cn
+;
+; :Date: 2018-6-11 9:10:36
+;-
+
+;pf='D:\IDLWorkspace\_ESE_GSF_Tasks\XMDX\ZipFileService\zipfileservice.pro'
+;SaveProfile2Savefile, pf, /gsf, /idl
+
+;input_file 支持一个文件，支持多个文件
+;同样支持 'file1.dat,file2.dat,file3.dat',这样以逗号分割的多个文件
+;如果后缀都是.dat，则加上hdr文件一起打包
+PRO GSF_ZipFileService, input_file=input_file, out_basename=out_basename, $
+  output_path=output_path, zipfile_url=zipfile_url
+
+  COMPILE_OPT idl2
+
+  ;testcode
+  ;input_file = 'D:\Temp\XMDX\output\OrthoProduct\GF1-PMS\GF1_PMS1_E118.0_N24.7_20140122_L1A0000208879-MSS1_mss_rpcortho.dat'
+  ;input_file = 'D:\Temp\XMDX\output\StandardProduct\Landsat\LC81210382016207LGN00\LC81210382016207LGN00_MTL.txt'
+  ;input_file = 'C:\Program Files\Harris\ENVI55\data\china_vectors\beijing.shp'
+
+  tmp_file = input_file
+
+  IF N_ELEMENTS(tmp_file) EQ 1 THEN $
+    tmp_file = STRSPLIT(tmp_file, ',', /extract, count=n_files)
+
+  ;文件后缀
+  file_ext = STRLOWCASE(GSF_GetFileExtension(tmp_file[0], basename=basename))
+  in_dir = FILE_DIRNAME(tmp_file[0])
+
+  n_files = N_ELEMENTS(tmp_file)
+
+  IF n_files EQ 1 THEN BEGIN
+
+    tmp_file = tmp_file[0]
+
+    is_directory = FILE_TEST(tmp_file, /directory)
+
+    ;如果是一个文件夹
+    IF is_directory THEN BEGIN
+      files = tmp_file
+    ENDIF ELSE BEGIN
+      ;如果输入一个文件
+      CASE file_ext OF
+        ;如果是ENVI格式
+        '.dat': files = [tmp_file, tmp_file.Replace('.dat','.hdr',/fold_case)]
+
+        '.shp': BEGIN
+          ;如果是矢量文件
+          input_dir = FILE_DIRNAME(tmp_file)
+          files = FILE_SEARCH(FILEPATH(basename+'.*', root_dir=input_dir))
+
+          basename = basename+'_vector'
+        END
+
+        ELSE: BEGIN
+
+          IF file_ext EQ '.xml' || file_ext EQ '.txt' THEN BEGIN
+            ;如果是其他后缀，比如xml（sentinel-2）、txt（landsat），则压缩上一层文件夹目录
+            ;并以上一层文件夹名为输出压缩包名
+            files = FILE_DIRNAME(tmp_file)
+            !NULL = GSF_GetFileExtension(files, basename=basename)
+          ENDIF ELSE BEGIN
+            files = tmp_file
+          ENDELSE
+
+        END
+      ENDCASE
+    ENDELSE
+
+  ENDIF ELSE BEGIN
+    ;如果输入数组
+    ;如果后缀都是.dat，则加上hdr文件
+    IF MIN(tmp_file.EndsWith('.dat',/fold_case)) EQ 1 THEN BEGIN
+      files = [tmp_file, tmp_file.Replace('.dat','.hdr',/fold_case)]
+    ENDIF ELSE BEGIN
+      files = tmp_file
+    ENDELSE
+
+  ENDELSE
+
+  ;输出路径
+  CD, current=cur_dir
+  IF ~KEYWORD_SET(output_path) THEN output_path=cur_dir
+
+  ;2019年10月10日 16:40:38 更新
+  ;支持设置输出压缩文件名
+  IF KEYWORD_SET(out_basename) THEN basename = out_basename
+
+  CASE STRUPCASE(!VERSION.OS_FAMILY) OF
+    'WINDOWS': BEGIN
+      rar_exe_file = FILEPATH('Rar.exe', root_dir=FILE_DIRNAME(ROUTINE_FILEPATH()), $
+        subdirectory=['WinRAR'])
+      zip_cmd = rar_exe_file+' a -r -ep1 '
+      output_file = FILEPATH(basename+'.zip', root_dir=output_path)
+      outfile_cmd = '"'+output_file+'"'
+
+      ;输入文件组合字符串
+      infile_cmd = '"'+STRJOIN(files, '" "')+'"'
+
+      noshell=1
+    END
+
+    'UNIX': BEGIN
+      zip_cmd = 'tar -zcvf '
+      outfile_cmd = FILEPATH(basename+'.tar.gz', root_dir=output_path)
+      output_file = outfile_cmd
+
+      infile_cmd = STRJOIN(FILE_BASENAME(files), ' ')
+
+      noshell=0
+    END
+  ENDCASE
+
+  ;先cd到输入路径
+  CD, in_dir
+
+  ;组合最终命令
+  final_cmd = zip_cmd + outfile_cmd + ' ' + infile_cmd
+  SPAWN, final_cmd, noshell=noshell, result, err_result
+
+  ;再cd回去
+  CD, cur_dir
+
+  zipfile_url = output_file
+END
+
+;将out_options中tif后缀的文件压缩为zip，并替换url
+PRO GSF_ZipResultFiles, out_options, format=format, delete=delete
+
+  COMPILE_OPT idl2
+  keys = (out_options.Keys()).toArray()
+
+  IF ~KEYWORD_SET(format) THEN format='.tif'
+
+  ;逐个key
+  FOREACH element, keys DO BEGIN
+    old_url = out_options[element]
+
+    IF ISA(old_url,/string) && old_url.EndsWith(format, /fold_case) THEN BEGIN
+      ;压缩
+      GSF_ZipFileService, input_file=old_url, output_path=FILE_DIRNAME(old_url), zipfile_url=zipfile_url
+      out_options[element] = zipfile_url
+
+      ;删除压缩前文件
+      IF KEYWORD_SET(delete) THEN GSF_File_Delete_Enhanced, old_url
+    ENDIF
+  ENDFOREACH
+END
+
+
+
+;通用配准代码
+;     n_tiepoints        -- 匹配的控制点个数（可选）
+;                           注：默认为500
+;     matching_window    -- 移动窗口大小（可选）：<数字>
+;                           注：默认为61
+;     search_window      -- 搜索窗口大小（可选）：<数字>
+;                           注：默认为255
+;     min_matching_score -- 最小相关性（可选）：<数字，0~1>
+;                           注：默认为0.65
+;     resampling         -- 重采样方法（可选）：{Nearest Neighbor}、{Bilinear}、{Cubic Convolution}
+;                           注：默认为Bilinear。
+;     warp_method        -- 校正模型（可选）：｛RST｝、｛Polynomial｝、｛Triangulation｝
+;                           注：默认值为Polynomial
+;     output_format      -- 输出文件格式（可选）：{ENVI}、{TIFF}
+;                           注：默认为ENVI标准格式。
+PRO GSF_ImageRegistration, base_raster=base_raster,             $
+  warp_raster=warp_raster, n_tiepoints=n_tiepoints,             $
+  matching_window=matching_window, search_window=search_window, $
+  min_matching_score=min_matching_score,                        $
+  resampling=resampling, warp_method=warp_method,               $
+  output_format=output_format, output_file=output_file,         $
+  output_raster=output_raster
+
+  COMPILE_OPT idl2
+  e=envi(/current)
+
+  ;默认参数
+  IF ~KEYWORD_SET(output_format) THEN output_format = 'ENVI'
+  IF ~KEYWORD_SET(n_tiepoints) THEN n_tiepoints = 500
+  IF ~KEYWORD_SET(matching_window) THEN matching_window = 61
+  IF ~KEYWORD_SET(search_window) THEN search_window = 255
+  IF ~KEYWORD_SET(min_matching_score) THEN min_matching_score = 0.65
+  IF ~KEYWORD_SET(resampling) THEN resampling  = 'Nearest Neighbor'
+  IF ~KEYWORD_SET(warp_method) THEN warp_method = 'Polynomial'
+  IF ~KEYWORD_SET(output_file) THEN BEGIN
+    CASE STRUPCASE(output_format) OF
+      'ENVI': output_file = e.GetTemporaryFilename('dat')
+      'TIFF': output_file = e.GetTemporaryFilename('tif')
+    ENDCASE
+  ENDIF
+
+  ;如果使用参考影像，需要对参考影像进行裁剪、重投影
+  baseRef = base_raster.SPATIALREF
+  warpRef = warp_raster.SPATIALREF
+
+  ;输出空间分辨率
+  output_pixel_size = warpRef.PIXEL_SIZE
+
+  ;如果基准影像坐标系与待校正坐标系不一致，则对基准影像进行重投影
+  IF warpRef.COORD_SYS_STR NE baseRef.COORD_SYS_STR THEN BEGIN
+    ;而且只需要处理最后一个波段即可
+    ;获取待校正影像4个角文件坐标，并转换为地理坐标
+    FileX = [0, warp_raster.NCOLUMNS-1, warp_raster.NCOLUMNS-1, 0]
+    FileY = [0, 0, warp_raster.NROWS-1, warp_raster.NROWS-1]
+
+    ;将地理坐标转换为参考影像的地理坐标
+    warpRef.ConvertFileToMap, FileX, FileY, MapX, MapY
+    warpRef.ConvertMapToMap, MapX, MapY, MapXX, MapYY, baseRef
+    baseRef.ConvertMapToFile, MapXX, MapYY, FileXX, FileYY
+    FileXX = FileXX > 0 < (base_raster.nColumns-1)
+    FileYY = FileYY > 0 < (base_raster.nRows-1)
+
+    warpRefType = STRMID(warpRef.COORD_SYS_STR,0,6)
+    IF STRMATCH(warpRefType,'PROJCS',/FOLD_CASE) THEN proj_type=42 ELSE proj_type=1
+
+    ;创建待校正坐标系
+    o_proj = ENVI_PROJ_CREATE(type=proj_type, pe_coord_sys_str=warpRef.COORD_SYS_STR)
+
+    referenceFid = ENVIRASTERTOFID(base_raster)
+    dims = LONG64([-1L, MIN(FileXX),MAX(FileXX),MIN(FileYY),MAX(FileYY)])
+    pos = [base_raster.NBANDS - 1]
+
+    ;将裁剪和重投影后的新参考图像保存到临时文件中
+    new_base_file = e.GetTemporaryFilename('gsftemp.dat')
+    ;执行投影转换
+    ENVI_CONVERT_FILE_MAP_PROJECTION, fid=referenceFid,   $
+      pos=pos, dims=dims, o_proj=o_proj,                  $
+      o_pixel_size=output_pixel_size,                     $
+      grid=[25,25], out_name=new_base_file,               $
+      warp_method=1, resampling=2,                        $
+      background=0, degree=2, r_fid=r_fid
+    ;关闭新的参考影像，并重新打开
+    ENVI_FILE_MNG, id=r_fid, /remove
+
+    ;打开新的基准影像
+    newbase_raster = e.OpenRaster(new_base_file)
+  ENDIF ELSE BEGIN
+    newbase_raster = base_raster
+  ENDELSE
+
+  ;找点使用后2波段
+  sub_base_raster = ENVISubsetRaster(newbase_raster, bands=[(newbase_raster.nbands-2)>0])
+  sub_warp_raster = ENVISubsetRaster(warp_raster, bands=[(warp_raster.nbands-2)>0])
+
+  ;开始做配准
+  GenerateTiePointsTask = ENVITask('GenerateTiePointsByCrossCorrelation')
+  GenerateTiePointsTask.INPUT_RASTER1 = sub_base_raster
+  GenerateTiePointsTask.INPUT_RASTER2 = sub_warp_raster
+  GenerateTiePointsTask.MINIMUM_MATCHING_SCORE = min_matching_score
+  GenerateTiePointsTask.REQUESTED_NUMBER_OF_TIEPOINTS = n_tiepoints
+  GenerateTiePointsTask.SEARCH_WINDOW = search_window*2.0
+  GenerateTiePointsTask.MATCHING_WINDOW = matching_window
+  GenerateTiePointsTask.Execute
+
+  ;print, 'GenerateTiePointsTask.OUTPUT_TIEPOINTS Time 1', GenerateTiePointsTask.OUTPUT_TIEPOINTS.Count()
+
+  FilterTask = ENVITask('FilterTiePointsByGlobalTransform')
+  FilterTask.INPUT_TIEPOINTS = GenerateTiePointsTask.OUTPUT_TIEPOINTS
+  FilterTask.ERROR_THRESHOLD = 5.0
+  FilterTask.Execute
+
+  ;print, 'FilterTask.OUTPUT_TIEPOINTS Time 1', FilterTask.OUTPUT_TIEPOINTS.Count()
+
+  tiepoints = FilterTask.OUTPUT_TIEPOINTS
+
+  ;如果点个数依然少于10，则修改找点方法为
+  IF tiepoints.Count() LT 30 THEN BEGIN
+
+    ;先销毁之前的点，否则无法删除临时基准图像
+    OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints]
+
+    GenerateTiePointsTask = ENVITask('GenerateTiePointsByMutualInformation')
+    GenerateTiePointsTask.INPUT_RASTER1 = sub_base_raster
+    GenerateTiePointsTask.INPUT_RASTER2 = sub_warp_raster
+    GenerateTiePointsTask.MINIMUM_MATCHING_SCORE = 0.01
+    GenerateTiePointsTask.REQUESTED_NUMBER_OF_TIEPOINTS = n_tiepoints
+    GenerateTiePointsTask.SEARCH_WINDOW = search_window
+    GenerateTiePointsTask.Execute
+
+    ;print, 'GenerateTiePointsTask.OUTPUT_TIEPOINTS Time 2', GenerateTiePointsTask.OUTPUT_TIEPOINTS.Count()
+
+    FilterTask = ENVITask('FilterTiePointsByGlobalTransform')
+    FilterTask.INPUT_TIEPOINTS = GenerateTiePointsTask.OUTPUT_TIEPOINTS
+    FilterTask.ERROR_THRESHOLD = 5.0
+    FilterTask.Execute
+
+    ;print, 'FilterTask.OUTPUT_TIEPOINTS Time 2', FilterTask.OUTPUT_TIEPOINTS.Count()
+
+    tiepoints = FilterTask.OUTPUT_TIEPOINTS
+  ENDIF
+
+  sub_base_raster.Close & sub_warp_raster.Close
+
+  ;如果实在找不到点，只能报错了，并且删除临时文件（包括正射结果）
+  IF tiepoints.Count() LT 30 THEN BEGIN
+    ;删除所有问题
+    IF N_ELEMENTS(new_base_file) THEN BEGIN
+      ;先销毁之前的点，否则无法删除临时基准图像
+      FILE_DELETE, GenerateTiePointsTask.OUTPUT_TIEPOINTS.URI, tiepoints.URI, /quiet
+      OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints]
+      GSF_File_Delete_Enhanced, newbase_raster
+    ENDIF
+    MESSAGE, 'Not enough tie points were generated.', /noname
+  ENDIF
+
+  new_tiepoints = ENVITiePointSet(input_raster1=newbase_raster, $
+    input_raster2=warp_raster, tiepoints=tiepoints.Get())
+
+  RegistrationTask = ENVITask('ImageToImageRegistration')
+  RegistrationTask.INPUT_TIEPOINTS = new_tiepoints
+  RegistrationTask.WARPING = 'Polynomial'
+  RegistrationTask.POLYNOMIAL_DEGREE = 2
+  RegistrationTask.OUTPUT_PIXEL_SIZE = output_pixel_size
+  RegistrationTask.RESAMPLING = resampling
+  ;如果输出为ENVI格式
+  IF output_format EQ 'ENVI' THEN RegistrationTask.OUTPUT_RASTER_URI = output_file
+  RegistrationTask.Execute
+
+  output_raster = RegistrationTask.Output_Raster
+
+  ;先销毁之前的点，否则无法删除临时基准图像
+  FILE_DELETE, GenerateTiePointsTask.OUTPUT_TIEPOINTS.URI, tiepoints.URI, /quiet
+  OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints, new_tiepoints]
+
+  ;删除临时文件
+  IF N_ELEMENTS(new_base_file) THEN GSF_File_Delete_Enhanced, newbase_raster
+
+  ;如果输出为TIFF
+  IF output_format EQ 'TIFF' THEN $
+    output_raster.EXPORT, output_file, 'tiff'
+
+  output_raster.Close
+  ;保留元数据信息
+  output_raster = e.OpenRaster(output_file, metadata_override=warp_raster.Metadata)
+  output_raster.Metadata.AddItem, 'data ignore value', 0, error=err
+  output_raster.WriteMetadata
+END
+
+
+PRO GSF_UnZip_Task, $
+  input_file=input_file,          $ ;输入压缩包文件路径
+  output_path=output_path,        $ ;输入解压路径
+  unzip_directly=unzip_directly,  $ ;是否直接解压（不新建文件夹）
+  unzipped_files=unzipped_files,  $ ;输出解压文件（如果新建文件夹解压，则输出新建文件夹目录，否则输出files）
+  mss_file=mss_file,              $ ;解压后多光谱文件
+  pan_file=pan_file                 ;解压后全色文件
+
+  COMPILE_OPT idl2
+
+  ;input_file='D:\Temp\XMDX\GF1_PMS1_E117.9_N24.4_20140122_L1A0000208880.tar.gz'
+  ;input_file='D:\Temp\XMDX\ZY3_MUX_E117.8_N24.3_20141005_L1A0001866039.tar.gz'
+  ;input_file='D:\Temp\XMDX\ZY3_NAD_E117.8_N24.3_20141005_L1A0001865912.tar.gz'
+
+  tar_format = GSF_GetFileExtension(input_file, basename=input_basename)
+  IF input_file.endswith('.tar.gz', /fold_case) THEN tar_format='.tar.gz'
+
+  ;输入文件路径
+  inPath = file_dirname(input_file)
+
+  ;首先将文件解压到输出路径的新建文件夹中
+  IF ~keyword_set(output_path) THEN unzip_path=inPath ELSE unzip_path = output_path
+
+  ;是否直接解压
+  ;  unzip_directly = 0
+
+  ;哨兵数据直接解压
+  ;  IF STRMATCH(input_basename, 'S3A*.zip') || $
+  ;    STRMATCH(input_basename, 'S2A*.zip') THEN $
+  ;    unzip_directly = 1
+
+  ;根据输入压缩包文件名，新建同名文件夹
+  IF ~KEYWORD_SET(unzip_directly) THEN BEGIN
+    fbasename = FILE_BASENAME(input_file, tar_format, /fold_case)
+    unzip_path = FILEPATH(fbasename, root_dir=unzip_path)
+    FILE_MKDIR, unzip_path
+  ENDIF
+
+  ;初步解压
+  CASE STRUPCASE(tar_format) OF
+    '.ZIP': file_unzip, input_file, unzip_path, /verbose, files=unzipped_files
+    ELSE:  file_untar, input_file, unzip_path, /verbose, files=unzipped_files
+  ENDCASE
+
+  ;如果不是直接解压（即新建文件夹解压），则删除新建文件夹即可
+  IF ~KEYWORD_SET(unzip_directly) THEN unzipped_files=unzip_path
+
+  ;搜索全色和多光谱文件
+  pan_file = '' & mss_file = ''
+  ;
+  ;如果是GF1
+  IF input_basename.StartsWith('GF1') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*mss*.xml', /fold_case))[0]
+    pan_file = (FILE_SEARCH(unzip_path, '*pan*.xml', /fold_case))[0]
+
+    ;如果是WFV，则搜索
+    IF input_basename.Contains('GF1_WFV',/fold_case) THEN $
+      mss_file = (FILE_SEARCH(unzip_path, 'gf1_wfv*.xml', /fold_case))[0]
+
+    ;如果是GF1B、C、D
+    IF input_basename.StartsWith('GF1B') || input_basename.StartsWith('GF1C') || $
+      input_basename.StartsWith('GF1D') THEN BEGIN
+
+      mss_file = (FILE_SEARCH(unzip_path, '*MUX*.xml', /fold_case))[0]
+      pan_file = (FILE_SEARCH(unzip_path, '*PAN*.xml', /fold_case))[0]
+    ENDIF
+
+    RETURN
+  ENDIF
+
+  ;如果是GF2
+  IF input_basename.StartsWith('GF2') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*mss*.xml', /fold_case))[0]
+    pan_file = (FILE_SEARCH(unzip_path, '*pan*.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是GF3，则较为特殊
+  IF input_basename.StartsWith('GF3_') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, 'gf3_*.meta.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是GF4，则较为特殊
+  IF input_basename.StartsWith('GF4_PM') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, 'gf4_pms*.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是GF5，则较为特殊，目前仅考虑AHSI、VIMS
+  IF input_basename.StartsWith('GF5_') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, 'gf5_*.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是GF6
+  IF input_basename.StartsWith('GF6') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*mux*.xml', /fold_case))[0]
+    pan_file = (FILE_SEARCH(unzip_path, '*pan*.xml', /fold_case))[0]
+
+    ;如果是WFV，则搜索
+    IF input_basename.Contains('GF6_WFV',/fold_case) THEN BEGIN
+      wfv_files = FILE_SEARCH(unzip_path, 'gf6_wfv*.xml', /fold_case)
+      mss_file = wfv_files[(WHERE(~wfv_files.EndsWith('.aux.xml',/fold_case)))[0]]
+    ENDIF
+    RETURN
+  ENDIF
+
+  ;如果是ZY3多光谱
+  IF input_basename.StartsWith('ZY3_MUX') THEN BEGIN
+    tmp_files = (FILE_SEARCH(unzip_path, 'ZY3_MUX_*.xml', /fold_case))
+    idx = WHERE(~tmp_files.EndsWith('.aux.xml',/fold_case))
+    mss_file = (tmp_files[idx])[0]
+    RETURN
+  ENDIF
+
+  ;如果是ZY3全色
+  IF input_basename.StartsWith('ZY3_NAD') THEN BEGIN
+    tmp_files = (FILE_SEARCH(unzip_path, 'ZY3_NAD_*.xml', /fold_case))
+    idx = WHERE(~tmp_files.EndsWith('.aux.xml',/fold_case))
+    pan_file = (tmp_files[idx])[0]
+    RETURN
+  ENDIF
+
+  ;如果是ZY3-02
+  IF input_basename.StartsWith('ZY302') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*MUX.xml', /fold_case))[0]
+    pan_file = (FILE_SEARCH(unzip_path, '*NAD.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是Landsat系列
+  IF input_basename.StartsWith('LT5') || input_basename.StartsWith('LE7') || $
+    input_basename.StartsWith('LC8') || input_basename.StartsWith('LC08') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*_MTL.txt', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是HJ1A1B系列
+  IF input_basename.StartsWith('HJ1A-CCD') || input_basename.StartsWith('HJ1B-CCD') THEN BEGIN
+    mss_file = (FILE_SEARCH(unzip_path, '*.xml', /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是Sentinel-2
+  IF input_basename.StartsWith('S2') THEN BEGIN
+    search_string = FILEPATH(input_basename,root_dir=unzip_path)+'*'+PATH_SEP()+'MTD_MSIL1C.xml'
+    mss_file = (FILE_SEARCH(search_string, /fold_case))[0]
+    RETURN
+  ENDIF
+
+  ;如果是Sentinel-3
+  IF input_basename.StartsWith('S3') THEN BEGIN
+    search_string = FILEPATH(input_basename,root_dir=unzip_path)+'*'+PATH_SEP()+'*.xml'
+    mss_file = (FILE_SEARCH(search_string, /fold_case))[0]
+    RETURN
+  ENDIF
+END
+
+; program to estimate mosaic parameters
+
+PRO GSF_GEOREF_MOSAIC_SETUP, fids=fids, dims=dims, out_ps=out_ps, $
+  xsize=xsize, ysize=ysize, x0=x0, y0=y0, map_info=map_info
+  COMPILE_OPT strictarr, hidden
+
+  ; some basic error checking
+  ;
+  ;envi, /restore_base_save_files
+  IF KEYWORD_SET(dims) THEN $
+    IF N_ELEMENTS(fids) NE N_ELEMENTS(dims[0,*]) THEN dims=0
+  ;
+  IF N_ELEMENTS(fids) LT 2 THEN BEGIN
+    xsize = -1
+    ysize = -1
+    x0 = -1
+    y0 = -1
+    RETURN
+  ENDIF
+
+  ; if no DIMS passed in
+  ;
+  nfiles = N_ELEMENTS(fids)
+  IF (KEYWORD_SET(dims) EQ 0) THEN BEGIN
+    dims = FLTARR(5, nfiles)
+    FOR i=0, nfiles-1 DO BEGIN
+      ENVI_FILE_QUERY, fids[i], ns=ns, nl=nl
+      dims[*,i] = [-1L, 0, ns-1, 0, nl-1]
+    ENDFOR
+  ENDIF
+
+  ; - compute the size of the output mosaic (xsize and ysize)
+  ; - store the map coords of the UL corner of each image since you'll need it later
+  ;
+  UL_corners_X = DBLARR(nfiles)
+  UL_corners_Y = DBLARR(nfiles)
+  east = -1e34
+  west = 1e34
+  north = -1e34
+  south = 1e34
+  FOR i=0,nfiles-1 DO BEGIN
+    pts = [ [dims[1,i], dims[3,i]],   $   ; UL
+      [dims[2,i], dims[3,i]],   $   ; UR
+      [dims[1,i], dims[4,i]],   $   ; LL
+      [dims[2,i], dims[4,i]] ]   ; LR
+    ENVI_CONVERT_FILE_COORDINATES, fids[i], pts[0,*], pts[1,*], xmap, ymap, /to_map
+    UL_corners_X[i] = xmap[0]
+    UL_corners_Y[i] = ymap[0]
+    east  = east > MAX(xmap)
+    west = west < MIN(xmap)
+    north = north > MAX(ymap)
+    south = south < MIN(ymap)
+  ENDFOR
+  xsize = east - west
+  ysize = north - south
+  ;
+  xsize_pix = FIX( xsize/out_ps[0] )+1
+  ysize_pix = FIX( ysize/out_ps[1])+1
+  ;xsize_pix = round( xsize/out_ps[0] )
+  ;ysize_pix = round( ysize/out_ps[1] )
+
+  ; to make things easy, create a temp image that's got a header
+  ; that's the same as the output mosaic image
+  ;
+  proj = ENVI_GET_PROJECTION(fid=fids[0])
+  map_info = ENVI_MAP_INFO_CREATE(proj=proj, mc=[0,0,west,north], ps=out_ps)
+  tempdata = BYTARR(10,10)
+  ENVI_ENTER_DATA, tempdata, map_info=map_info, /no_realize, r_fid=tmp_fid
+
+  ; find the x and y offsets for the images
+  ;
+  x0 = LONARR(nfiles)
+  y0 = LONARR(nfiles)
+  FOR i=0,nfiles-1 DO BEGIN
+    ENVI_CONVERT_FILE_COORDINATES, tmp_fid, xpix, ypix, UL_corners_X[i], UL_corners_Y[i]
+    x0[i] = xpix
+    y0[i] = ypix
+  ENDFOR
+
+  ; delete the tmp file
+
+  ENVI_FILE_MNG, id=tmp_fid, /remove, /no_warning, /delete
+END
+
+;input_files-用逗号隔开的字符串，包含多个文件   file1.dat,file2.dat,file3.dat
+;input_files = 'D:\IDLWorkspace\_UC2018\data\mosaic_1.hdr,D:\IDLWorkspace\_UC2018\data\mosaic_2.hdr'
+PRO GSF_MosaicRaster_Classic,           $
+  input_files=input_files,              $
+  data_ignore_value=data_ignore_value,  $
+  output_file=output_file,              $
+  out_options=out_options
+
+  COMPILE_OPT idl2
+  e=envi(/headless)
+
+  ;test_code
+  ;input_files = 'D:\IDLWorkspace\_UC2018\data\mosaic_1.hdr,D:\IDLWorkspace\_UC2018\data\mosaic_2.hdr'
+
+  files = STRSPLIT(input_files,',',/extract,count=count)
+  raster_fids = LONARR(count)
+
+  tempraster = e.OpenRaster(files[0])
+  tempfid = ENVIRasterToFID(tempraster)
+  raster_fids[0]=tempfid
+
+  ENVI_FILE_QUERY,tempfid,nb=nb,ns=tempns,nl=tempnl,data_type=data_type
+  map_info = ENVI_GET_MAP_INFO(fid=tempfid)
+  out_ps=map_info.PS[0:1]
+
+  IF N_ELEMENTS(pos) EQ 0 OR N_ELEMENTS(pos) GT nb THEN pos=LINDGEN(nb)
+  posarr=LONARR(N_ELEMENTS(pos),count)
+  FOR i=0,count-1 DO posarr[*,i]=pos
+
+  dimsarr=LONARR(5,count)
+  dimsarr[*,0]=[-1,0, tempns-1,0, tempnl-1];-crop
+
+  FOR i=1,count-1 DO BEGIN
+    ;打开文件ID
+    tmpraster = e.OpenRaster(files[i])
+    tmpfid = ENVIRasterToFID(tmpraster)
+    raster_fids[i]=tmpfid
+    ENVI_FILE_QUERY,tmpfid,nb=nb,ns=tempns,nl=tempnl
+    dimsarr[*,i]=[-1,0, tempns-1,0, tempnl-1];-crop
+  ENDFOR
+
+  GSF_GEOREF_MOSAIC_SETUP, fids=raster_fids, out_ps=out_ps, dims=dimsarr, $
+    xsize=xsize, ysize=ysize, x0=x0, y0=y0, map_info=map_info
+  ;
+  use_see_through = INTARR(count)+1
+  IF ~N_ELEMENTS(data_ignore_value) THEN data_ignore_value=0
+  seeTv = MAKE_ARRAY(count,value=data_ignore_value)
+
+  IF ~KEYWORD_SET(output_file) THEN $
+    output_file = (e.GetTemporaryFilename()).Replace('envitempfile','ENVIMosaicFile_')
+
+  ENVI_DOIT, 'mosaic_doit', fid=raster_fids, pos=posarr,    $
+    dims=dimsarr, out_name=output_file, xsize=xsize,        $
+    ysize=ysize, x0=x0, y0=y0, georef=1, out_dt=data_type,  $
+    pixel_size=out_ps, background=data_ignore_value,        $
+    see_through_val=seetv,use_see_through = use_see_through,$
+    map_info=map_info, interp=0
+
+  print, output_file
+END
+
+
+PRO GSF_RPCOrtho_and_Registration,    $
+  input_raster=input_raster,          $
+  dem_file=dem_file,                  $
+  base_file=base_file,                $
+  search_window=search_window,        $
+  number_of_gcps=number_of_gcps,      $
+  output_pixel_size=output_pixel_size,$
+  resampling=resampling,              $
+  output_format=output_format,        $
+  output_file=output_file,            $
+  output_raster=output_raster
+
+  COMPILE_OPT idl2
+  e=envi(/current)
+  ON_ERROR, 2
+
+  IF ~KEYWORD_SET(number_of_gcps) THEN number_of_gcps=400
+  IF ~KEYWORD_SET(search_window) THEN search_window=255
+  IF ~KEYWORD_SET(output_format) THEN output_format='ENVI'
+
+  ;记录是否需要配准
+  IF N_ELEMENTS(base_file) NE 0 && FILE_TEST(base_file) THEN $
+    need_regis=1 ELSE need_regis=0
+
+  IF ~KEYWORD_SET(dem_file) THEN $
+    dem_file = FILEPATH('GMTED2010.jp2', root_dir=e.ROOT_DIR, $
+    subdirectory=['data'])
+  dem_raster = e.OpenRaster(dem_file)
+
+  ;直接执行无控制点正射校正
+  ;初始化正射Task
+  Task = ENVITASK('RPCOrthorectification')
+  ;设置输入参数
+  Task.INPUT_RASTER = input_raster
+  Task.DEM_RASTER = dem_raster
+  Task.RESAMPLING = resampling
+  Task.DEM_IS_HEIGHT_ABOVE_ELLIPSOID = 0
+  Task.GRID_SPACING = 10
+  Task.OUTPUT_PIXEL_SIZE = output_pixel_size
+
+  ;如果输出为ENVI格式
+  IF output_format EQ 'ENVI' && need_regis EQ 0 THEN $
+    Task.OUTPUT_RASTER_URI = output_file
+
+  Task.Execute
+
+  ;添加背景值
+  Task.OUTPUT_RASTER.Metadata.AddItem, 'data ignore value', 0, error=err
+
+  ;如果存在参考影像，则执行配准
+  IF need_regis THEN BEGIN
+
+    ;如果使用参考影像，需要对参考影像进行裁剪、重投影
+    baseRaster = e.OpenRaster(base_file)
+    baseRef = baseRaster.SPATIALREF
+
+    warpRaster = Task.Output_Raster
+    warpRef = warpRaster.SPATIALREF
+
+    ;如果基准影像坐标系与待校正坐标系不一致，则对基准影像进行重投影
+    IF warpRef.COORD_SYS_STR NE baseRef.COORD_SYS_STR THEN BEGIN
+      ;而且只需要处理最后一个波段即可
+      ;获取待校正影像4个角文件坐标，并转换为地理坐标
+      FileX = [0, warpRaster.NCOLUMNS-1, warpRaster.NCOLUMNS-1, 0]
+      FileY = [0, 0, warpRaster.NROWS-1, warpRaster.NROWS-1]
+
+      ;将地理坐标转换为参考影像的地理坐标
+      warpRef.ConvertFileToMap, FileX, FileY, MapX, MapY
+      warpRef.ConvertMapToMap, MapX, MapY, MapXX, MapYY, baseRef
+      baseRef.ConvertMapToFile, MapXX, MapYY, FileXX, FileYY
+      FileXX = FileXX > 0 < (baseRaster.nColumns-1)
+      FileYY = FileYY > 0 < (baseRaster.nRows-1)
+
+      warpRefType = STRMID(warpRef.COORD_SYS_STR,0,6)
+      IF STRMATCH(warpRefType,'PROJCS',/FOLD_CASE) THEN proj_type=42 ELSE proj_type=1
+
+      ;创建待校正坐标系
+      o_proj = ENVI_PROJ_CREATE(type=proj_type, pe_coord_sys_str=warpRef.COORD_SYS_STR)
+
+      referenceFid = ENVIRASTERTOFID(baseRaster)
+      dims = LONG64([-1L, MIN(FileXX),MAX(FileXX),MIN(FileYY),MAX(FileYY)])
+      pos = [baseRaster.NBANDS - 1]
+
+      ;将裁剪和重投影后的新参考图像保存到临时文件中
+      new_base_file = e.GetTemporaryFilename('gsftemp.dat')
+      ;执行投影转换
+      ENVI_CONVERT_FILE_MAP_PROJECTION, fid=referenceFid,   $
+        pos=pos, dims=dims, o_proj=o_proj,                  $
+        o_pixel_size=output_pixel_size,                     $
+        grid=[25,25], out_name=new_base_file,               $
+        warp_method=1, resampling=2,                        $
+        background=0, degree=2, r_fid=r_fid
+      ;关闭新的参考影像，并重新打开
+      ENVI_FILE_MNG, id=r_fid, /remove
+
+      ;打开新的基准影像
+      newBaseRaster = e.OpenRaster(new_base_file)
+    ENDIF ELSE BEGIN
+      newBaseRaster = baseRaster
+    ENDELSE
+
+    ;找点使用后2波段
+    sub_BaseRaster = ENVISubsetRaster(newBaseRaster, bands=[(newBaseRaster.nbands-2)>0])
+    sub_WarpRaster = ENVISubsetRaster(warpRaster, bands=[(warpRaster.nbands-2)>0])
+
+    ;开始做配准
+    GenerateTiePointsTask = ENVITask('GenerateTiePointsByCrossCorrelation')
+    GenerateTiePointsTask.INPUT_RASTER1 = sub_BaseRaster
+    GenerateTiePointsTask.INPUT_RASTER2 = sub_WarpRaster
+    GenerateTiePointsTask.MINIMUM_MATCHING_SCORE = 0.65
+    GenerateTiePointsTask.REQUESTED_NUMBER_OF_TIEPOINTS = number_of_gcps
+    GenerateTiePointsTask.SEARCH_WINDOW = search_window*2.0
+    GenerateTiePointsTask.Execute
+
+    ;print, 'GenerateTiePointsTask.OUTPUT_TIEPOINTS Time 1', GenerateTiePointsTask.OUTPUT_TIEPOINTS.Count()
+
+    FilterTask = ENVITask('FilterTiePointsByGlobalTransform')
+    FilterTask.INPUT_TIEPOINTS = GenerateTiePointsTask.OUTPUT_TIEPOINTS
+    FilterTask.ERROR_THRESHOLD = 5.0
+    FilterTask.Execute
+
+    ;print, 'FilterTask.OUTPUT_TIEPOINTS Time 1', FilterTask.OUTPUT_TIEPOINTS.Count()
+
+    tiepoints = FilterTask.OUTPUT_TIEPOINTS
+
+    ;如果点个数依然少于10，则修改找点方法为
+    IF tiepoints.Count() LT 30 THEN BEGIN
+
+      ;先销毁之前的点，否则无法删除临时基准图像
+      OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints]
+
+      GenerateTiePointsTask = ENVITask('GenerateTiePointsByMutualInformation')
+      GenerateTiePointsTask.INPUT_RASTER1 = sub_BaseRaster
+      GenerateTiePointsTask.INPUT_RASTER2 = sub_WarpRaster
+      GenerateTiePointsTask.MINIMUM_MATCHING_SCORE = 0.01
+      GenerateTiePointsTask.REQUESTED_NUMBER_OF_TIEPOINTS = 400
+      GenerateTiePointsTask.SEARCH_WINDOW = search_window
+      GenerateTiePointsTask.Execute
+
+      ;print, 'GenerateTiePointsTask.OUTPUT_TIEPOINTS Time 2', GenerateTiePointsTask.OUTPUT_TIEPOINTS.Count()
+
+      FilterTask = ENVITask('FilterTiePointsByGlobalTransform')
+      FilterTask.INPUT_TIEPOINTS = GenerateTiePointsTask.OUTPUT_TIEPOINTS
+      FilterTask.ERROR_THRESHOLD = 5.0
+      FilterTask.Execute
+
+      ;print, 'FilterTask.OUTPUT_TIEPOINTS Time 2', FilterTask.OUTPUT_TIEPOINTS.Count()
+
+      tiepoints = FilterTask.OUTPUT_TIEPOINTS
+    ENDIF
+
+    sub_BaseRaster.Close & sub_WarpRaster.Close
+
+    ;如果实在找不到点，只能报错了，并且删除临时文件（包括正射结果）
+    IF tiepoints.Count() LT 30 THEN BEGIN
+      ;删除所有问题
+      IF N_ELEMENTS(new_base_file) THEN BEGIN
+        ;先销毁之前的点，否则无法删除临时基准图像
+        FILE_DELETE, GenerateTiePointsTask.OUTPUT_TIEPOINTS.URI, tiepoints.URI, /quiet
+        OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints]
+        GSF_File_Delete_Enhanced, newBaseRaster
+      ENDIF
+      MESSAGE, 'Not enough tie points were generated.', /noname
+    ENDIF
+
+    new_tiepoints = ENVITiePointSet(input_raster1=newBaseRaster, $
+      input_raster2=warpRaster, tiepoints=tiepoints.Get())
+
+    RegistrationTask = ENVITask('ImageToImageRegistration')
+    RegistrationTask.INPUT_TIEPOINTS = new_tiepoints
+    RegistrationTask.WARPING = 'Polynomial'
+    RegistrationTask.POLYNOMIAL_DEGREE = 2
+    RegistrationTask.OUTPUT_PIXEL_SIZE = output_pixel_size
+    RegistrationTask.RESAMPLING = resampling
+    ;如果输出为ENVI格式
+    IF output_format EQ 'ENVI' THEN RegistrationTask.OUTPUT_RASTER_URI = output_file
+    RegistrationTask.Execute
+
+    output_raster = RegistrationTask.Output_Raster
+
+    ;先销毁之前的点，否则无法删除临时基准图像
+    FILE_DELETE, GenerateTiePointsTask.OUTPUT_TIEPOINTS.URI, tiepoints.URI, /quiet
+    OBJ_DESTROY, [GenerateTiePointsTask.OUTPUT_TIEPOINTS, tiepoints, new_tiepoints]
+
+    ;删除临时文件
+    IF N_ELEMENTS(new_base_file) THEN GSF_File_Delete_Enhanced, newBaseRaster
+
+    ;GSF不需要删除正射结果【不知道为什么，需要先打开一次，才能Close，并删除】
+    warpFile = warpRaster.uri & warpRaster.Close
+    warpRaster = e.OpenRaster(warpFile)
+    GSF_File_Delete_Enhanced, warpRaster
+
+  ENDIF ELSE BEGIN
+
+    ;如果不需要配准
+    output_raster = Task.Output_Raster
+  ENDELSE
+
+  ;如果输出为TIFF
+  IF output_format EQ 'TIFF' THEN $
+    output_raster.EXPORT, output_file, 'tiff'
+
+  output_raster.Close
+  output_raster = e.OpenRaster(output_file)
+
+  ;如果是ENVI格式，才增加忽略值
+  IF output_format EQ 'ENVI' THEN BEGIN
+    output_raster.Metadata.AddItem, 'data ignore value', 0, error=err
+    output_raster.WriteMetadata
+  ENDIF
+END
+
+
+;WGS84转火星
+PRO WGS84_to_Mars, lon, lat, out_lon=out_lon, out_lat=out_lat
+  COMPILE_OPT idl2
+
+  ;定义一些常量
+  x_PI = !DPI*3000.0/180.0
+  PI = !DPI
+  a = 6378245.0
+  ee = 0.00669342162296594323
+
+  dlat = transformlat(lon-105.0, lat-35.0)
+  dlon = transformlon(lon-105.0, lat-35.0)
+  radlat = lat/180.0 *!DPI
+  magic = sin(radlat)
+  magic = 1 - ee*magic*magic
+  sqrtmagic = sqrt(magic)
+  dlat = (dlat*180.0)/((a*(1 - ee))/(magic*sqrtmagic) *!DPI)
+  dlon = (dlon*180.0)/(a/sqrtmagic*cos(radlat) *!DPI)
+  out_lat = lat + dlat
+  out_lon = lon + dlon
+
+  ;把国外的坐标再替换回去
+  out_idx = out_of_china(lon,lat)
+  IF out_idx[0] NE -1 THEN BEGIN
+    out_lon[out_idx] = lon[out_idx]
+    out_lat[out_idx] = lat[out_idx]
+  ENDIF
+END
+
+;火星转WGS84
+PRO Mars_to_WGS84, lon, lat, out_lon=out_lon, out_lat=out_lat
+  COMPILE_OPT idl2
+
+  ;定义一些常量
+  x_PI = !DPI*3000.0/180.0
+  PI = !DPI
+  a = 6378245.0
+  ee = 0.00669342162296594323
+
+  dlat = transformlat(lon-105.0, lat-35.0)
+  dlon = transformlon(lon-105.0, lat-35.0)
+  radlat = lat/180.0 *!DPI
+  magic = sin(radlat)
+  magic = 1 - ee*magic*magic
+  sqrtmagic = sqrt(magic)
+  dlat = (dlat*180.0)/((a*(1 - ee))/(magic*sqrtmagic) *!DPI)
+  dlon = (dlon*180.0)/(a/sqrtmagic*cos(radlat) *!DPI)
+  mglat = lat + dlat
+  mglon = lon + dlon
+  out_lon = lon*2 - mglon
+  out_lat = lat*2 - mglat
+
+  ;把国外的坐标再替换回去
+  out_idx = out_of_china(lon,lat)
+  IF out_idx[0] NE -1 THEN BEGIN
+    out_lon[out_idx] = lon[out_idx]
+    out_lat[out_idx] = lat[out_idx]
+  ENDIF
+END
+
+
+FUNCTION transformlat, lon, lat
+  ret = -100.0 + 2.0*lon + 3.0*lat + 0.2*lat*lat + 0.1*lon*lat + 0.2*sqrt(abs(lon))
+  ret += (20.0*sin(6.0*lon*!DPI) + 20.0*sin(2.0*lon*!DPI))*2.0/3.0;
+  ret += (20.0*sin(lat*!DPI) + 40.0*sin(lat/3.0*!DPI))*2.0/3.0;
+  ret += (160.0*sin(lat/12.0*!DPI) + 320*sin(lat*!DPI/30.0))*2.0/3.0;
+  RETURN, ret
+END
+
+
+FUNCTION transformlon, lon, lat
+  ret = 300.0 + lon + 2.0*lat + 0.1*lon*lon + 0.1*lon*lat + 0.1*sqrt(abs(lon))
+  ret += (20.0*sin(6.0*lon *!DPI) + 20.0*sin(2.0*lon *!DPI))*2.0/3.0
+  ret += (20.0*sin(lon *!DPI) + 40.0*sin(lon/3.0 *!DPI))*2.0/3.0
+  ret += (150.0*sin(lon/12.0 *!DPI) + 300.0*sin(lon/30.0 *!DPI))*2.0/3.0
+  RETURN,ret
+END
+
+
+FUNCTION out_of_china, lon, lat
+  COMPILE_OPT idl2
+  ;纬度3.86~53.55,经度73.66~135.05
+  ;return !(lon > 73.66 && lon < 135.05 && lat > 3.86 && lat < 53.55);
+  out_idx = WHERE(~(lon GT 73.66 AND lon LT 135.05 AND lat GT 3.86 AND lat LT 53.55))
+  RETURN, out_idx
+END
+
+
+PRO GSF_AddColorTables, add_ndvi=add_ndvi, add_new_rainbow=add_new_rainbow, $
+  add_new_greens=add_new_greens, add_npp=add_npp, add_all=add_all
+  COMPILE_OPT idl2
+
+  IF KEYWORD_SET(add_ndvi) || KEYWORD_SET(add_all) THEN BEGIN
+    ;添加NDVI颜色表
+    LOADCT, get_names=colormap_names
+    flag = WHERE(colormap_names EQ 'CB-NDVI')
+    IF flag[0] EQ -1 THEN BEGIN
+      ;添加颜色表
+      r = [255,255,255,255,255,240,221,202,183,165,146,126,106,88,69,51,32,14]
+      g = [5,31,61,90,120,149,179,214,252,244,228,212,195,179,162,145,129,112]
+      b = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+      r=CONGRID(r,256,/interp)
+      g=CONGRID(g,256,/interp)
+      b=CONGRID(b,256,/interp)
+      idx=255
+      MODIFYCT, idx, 'CB-NDVI', R, G, B
+    ENDIF
+  ENDIF
+
+  IF KEYWORD_SET(add_new_rainbow) || KEYWORD_SET(add_all) THEN BEGIN
+    ;添加New Rainbow
+    LOADCT, get_names=colormap_names
+    flag = WHERE(colormap_names EQ 'New Rainbow')
+    IF flag[0] EQ -1 THEN BEGIN
+      ;添加颜色表
+      ;r=[235,245,255,255,255,130,0,0,0,0,0,0,0,0]
+      ;g=[10,80,150,200,250,250,250,250,250,225,210,110,70,10]
+      ;b=[30,15,0,0,0,15,30,40,50,150,250,255,255,255]
+      ;r=REVERSE(CONGRID(r,256,/interp))
+      ;g=REVERSE(CONGRID(g,256,/interp))
+      ;b=REVERSE(CONGRID(b,256,/interp))
+
+      mac_flag = WHERE(colormap_names EQ 'Mac Style')
+      LOADCT, mac_flag, rgb_table=rgb
+      r=CONGRID(rgb[25:*,0],256,/interp)
+      g=CONGRID(rgb[25:*,1],256,/interp)
+      b=CONGRID(rgb[25:*,2],256,/interp)
+      idx=255
+      MODIFYCT, idx, 'New Rainbow', R, G, B
+    ENDIF
+  ENDIF
+
+  IF KEYWORD_SET(add_new_greens) || KEYWORD_SET(add_all) THEN BEGIN
+    ;添加New Greens
+    LOADCT, get_names=colormap_names
+    flag = WHERE(colormap_names EQ 'New Greens')
+    IF flag[0] EQ -1 THEN BEGIN
+
+      mac_flag = WHERE(colormap_names EQ 'CB-Greens')
+      LOADCT, mac_flag, rgb_table=rgb
+      r=CONGRID(rgb[0:220,0],256,/interp)
+      g=CONGRID(rgb[0:220,1],256,/interp)
+      b=CONGRID(rgb[0:220,2],256,/interp)
+      idx=255
+      MODIFYCT, idx, 'New Greens', R, G, B
+    ENDIF
+  ENDIF
+
+  IF KEYWORD_SET(add_npp) || KEYWORD_SET(add_all) THEN BEGIN
+    ;添加NPP颜色表
+    LOADCT, get_names=colormap_names
+    flag = WHERE(colormap_names EQ 'CB-NPP')
+    IF flag[0] EQ -1 THEN BEGIN
+      ;添加颜色表
+      r = [160,161,163,165,167,169,171,173,175,176,178,180,182,184,186,188,190,191,192,194,195,197,198,200,201,202,204,205,207,208,210,211,212,214,215,217,218,220,219,218,218,217,217,216,216,215,215,214,213,213,212,212,211,211,210,210,209,208,208,207,207,206,205,205,204,204,203,202,202,201,201,200,200,198,197,195,194,193,191,190,188,187,186,184,183,181,180,179,177,176,175,173,172,170,169,168,166,165,163,162,161,159,158,156,155,154,152,151,150,149,149,148,148,147,147,147,146,146,145,145,145,144,144,143,143,142,142,142,141,141,140,140,140,139,139,138,138,137,137,137,136,136,135,135,135,134,134,133,133,132,132,132,131,131,130,130,130,129,128,127,126,126,125,124,123,122,122,121,120,119,118,118,117,116,115,114,114,113,112,111,110,110,109,108,107,107,106,105,105,104,103,102,102,101,100,100,99,98,97,97,96,95,95,94,93,92,92,91,90,90,89,88,88,87,87,86,85,85,84,84,83,82,82,81,81,80,80,79,79,78,78,78,77,77,77,76,76,76,75,75,75,74,74,74,73,73,73,72,72,72,71,71,71,70,70,70]
+      g = [10,17,24,31,38,45,53,60,67,74,81,89,96,103,110,117,125,130,135,141,146,152,157,163,168,174,179,185,190,196,201,207,212,218,223,229,234,240,239,239,239,238,238,238,238,237,237,237,236,236,236,236,235,235,235,235,234,234,234,233,233,233,232,232,232,232,231,231,231,230,230,230,230,229,228,228,227,227,226,226,225,225,224,223,223,222,222,221,221,220,220,219,218,218,217,217,216,216,215,215,214,213,213,212,212,211,211,210,210,209,209,209,209,208,208,208,208,208,207,207,207,207,207,206,206,206,206,206,205,205,205,205,205,204,204,204,204,203,203,203,203,203,202,202,202,202,202,201,201,201,201,201,200,200,200,200,200,199,198,198,197,197,196,195,195,194,194,193,192,192,191,191,190,189,189,188,188,187,186,186,185,185,184,183,183,182,182,181,181,180,180,179,179,178,178,177,176,176,175,175,174,174,173,173,172,172,171,171,170,170,169,168,167,166,165,164,163,162,162,161,160,159,158,157,156,155,155,154,153,153,152,152,151,151,150,150,149,149,148,148,147,147,146,146,145,145,144,144,143,143,142,142,141,141,140,140]
+      b = [20,23,26,29,32,35,38,41,45,48,51,54,57,60,63,66,70,72,74,77,79,81,84,86,89,91,93,96,98,100,103,105,108,110,112,115,117,120,118,117,115,114,113,111,110,108,107,106,104,103,101,100,99,97,96,95,93,92,90,89,87,86,84,83,81,80,78,77,75,74,72,71,70,69,68,68,67,67,66,66,65,65,64,63,63,62,62,61,61,60,60,59,58,58,57,57,56,56,55,55,54,53,53,52,52,51,51,50,50,49,49,49,49,48,48,48,48,48,47,47,47,47,47,46,46,46,46,46,45,45,45,45,45,44,44,44,44,43,43,43,43,43,42,42,42,42,42,41,41,41,41,41,40,40,40,40,40,39,39,39,39,39,38,38,38,38,38,37,37,37,37,37,36,36,36,36,36,35,35,35,35,35,34,34,34,34,34,33,33,33,33,33,33,32,32,32,32,32,31,31,31,31,31,31,30,30,30,30,30,30,29,29,29,28,28,28,27,27,27,27,26,26,26,25,25,25,25,24,24,24,24,24,23,23,23,23,23,23,22,22,22,22,22,22,21,21,21,21,21,21,20,20,20,20,20,20]
+      idx=255
+      MODIFYCT, idx, 'CB-NPP', R, G, B
+    ENDIF
+  ENDIF
+
+END
+
+
+PRO GSF_Add_SG_ColorTables
+  COMPILE_OPT idl2
+
+  ;添加NDVI颜色表
+  LOADCT, get_names=colormap_names
+  flag = WHERE(colormap_names EQ 'NDVIColorMap')
+  IF flag[0] EQ -1 THEN BEGIN
+    ;添加颜色表
+    r=byte([14,14,14,28,28,28,42,42,42,56,56,56,70,70,70,84,84,84,98,98,98,112,112,112,127,127,127,142,142,142,156,156,156,170,170,170,184,184,184,198,198,198,212,212,212,226,226,226,241,241,241,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128])
+    g=byte([112,112,112,120,120,120,130,130,130,138,138,138,146,146,146,155,155,155,163,163,163,171,171,171,180,180,180,188,188,188,196,196,196,205,205,205,213,213,213,221,221,221,230,230,230,238,238,238,246,246,246,254,254,254,240,240,240,226,226,226,212,212,212,184,184,184,169,169,169,155,155,155,141,141,141,126,126,126,112,112,112,97,97,97,83,83,83,69,69,69,51,51,51,41,41,41,27,27,27,14,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128])
+    b=byte([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128])
+    r=REVERSE(CONGRID(r,256))
+    g=REVERSE(CONGRID(g,256))
+    b=REVERSE(CONGRID(b,256))
+    idx=255
+    MODIFYCT, idx, 'NDVIColorMap', R, G, B
+  ENDIF
+
+  ;添加Scouting颜色表
+  flag = WHERE(colormap_names EQ 'ScoutingColorMap')
+  IF flag[0] EQ -1 THEN BEGIN
+    ;添加颜色表
+    class_colors = [[82,163,154],[114,181,172],[147,199,192],[180,217,211],[216,235,232],[242,242,242],$
+      [250,240,222],[242,224,191],[235,208,160],[227,194,132],[217,181,120]]
+    class_colors = REVERSE(class_colors,2)
+    r = CONGRID(REFORM(class_colors[0,*]),256,/interp)
+    g = CONGRID(REFORM(class_colors[1,*]),256,/interp)
+    b = CONGRID(REFORM(class_colors[2,*]),256,/interp)
+    idx=255
+    MODIFYCT, idx, 'ScoutingColorMap', R, G, B
+  ENDIF
+
+  ;添加NDII颜色表
+  flag = WHERE(colormap_names EQ 'NDIIColorMap')
+  IF flag[0] EQ -1 THEN BEGIN
+    ;添加颜色表
+    r=byte([255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,252,252,252,252,252,252,252,252,250,250,247,245,245,242,240,222,206,193,182,167,155,141,129,114,103,92,77,65,49,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+    g=byte([210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,210,213,213,213,213,213,214,215,215,217,218,219,223,209,198,188,176,166,155,146,134,125,118,107,100,91,86,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76,76])
+    b=byte([128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,131,131,131,131,139,139,139,139,145,152,158,164,169,177,182,224,219,217,214,209,207,201,199,194,191,189,184,181,176,173,168,158,148,148,138,138,128,128,128,128,118,118,118,118,108,108,108,108,108,108,108,108,108,108,108,108,108,108,108,108])
+    r=CONGRID(r,256)
+    g=CONGRID(g,256)
+    b=CONGRID(b,256)
+    idx=255
+    MODIFYCT, idx, 'NDIIColorMap', R, G, B
+  ENDIF
+
+  ;添加SAVI颜色表
+  flag = WHERE(colormap_names EQ 'SAVIColorMap')
+  IF flag[0] EQ -1 THEN BEGIN
+    r=byte([0,0,0,0,0,0,0,0,17,17,17,17,35,51,57,83,97,112,125,138,151,163,176,188,198,209,207,204,201,201,196,196,194,194,191,191,189,189,186,186,184,184,179,179,176,176,176,176,173,173,173,173,171,171,171,171,171,171,171,171,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168])
+    g=byte([255,255,255,255,255,255,255,255,250,250,250,250,247,242,240,237,232,230,227,222,219,214,212,209,204,206,194,182,171,171,157,157,146,146,135,135,126,126,115,115,105,105,94,94,84,84,84,84,75,75,75,75,66,66,66,66,66,66,66,66,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58,58])
+    b=byte([195,195,195,195,195,195,195,195,196,196,196,196,198,198,199,201,201,202,203,202,202,202,203,204,203,205,188,171,155,155,137,137,122,122,107,107,94,94,80,80,66,66,52,52,39,39,39,39,26,26,26,26,14,14,14,14,14,14,14,14,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3])
+    r=REVERSE(CONGRID(r,256,/interp))
+    g=REVERSE(CONGRID(g,256,/interp))
+    b=REVERSE(CONGRID(b,256,/interp))
+    idx=255
+    MODIFYCT, idx, 'SAVIColorMap', R, G, B
+  ENDIF
+
+  ;添加Change颜色表
+  flag = WHERE(colormap_names EQ 'ChangeColorMap')
+  IF flag[0] EQ -1 THEN BEGIN
+
+    class_colors = [[214,156,156],[222,173,173],[230,191,190],[237,209,209],[245,226,225],[252,245,245],$
+      [250,255,235],[237,255,194],[223,255,153],[207,255,112],[191,255,71],[170,255,0]]
+    ;class_colors = REVERSE(class_colors,2)
+    r = CONGRID(REFORM(class_colors[0,*]),256,/interp)
+    g = CONGRID(REFORM(class_colors[1,*]),256,/interp)
+    b = CONGRID(REFORM(class_colors[2,*]),256,/interp)
+    idx=255
+    MODIFYCT, idx, 'ChangeColorMap', R, G, B
+  ENDIF
+END
+
+
+FUNCTION GSF_VarFind,Str
+  COMPILE_OPT strictarr
+
+  Len = StrLen(Str)
+  RetValue = 'b'
+  RefArr = Strtrim(Indgen(10),2)
+  IF Len EQ 1 THEN Return,RetValue
+  FOR i=1,Len-1 DO BEGIN
+    Char = StrMid(Str,i,1)
+    IF (Where(RefArr EQ Char))[0] EQ -1 THEN BREAK
+    RetValue = RetValue+Char
+  ENDFOR
+  ;
+  Return,RetValue
+END
+
+FUNCTION GSF_Expression_Var_Extract,ExpStr
+  COMPILE_OPT strictarr
+
+  ExpStr = STRLOWCASE(ExpStr)
+
+  IF STRPOS(ExpStr, 'b') EQ -1 THEN Return,!NULL
+
+  StrArray = StrSplit(ExpStr,'b',/extract)
+  StrArray = 'b'+StrArray
+  ;
+  FOR i=0,N_Elements(StrArray)-1 DO BEGIN
+    StrArray[i] = GSF_VarFind(StrArray[i])
+  ENDFOR
+  ;
+  LenArr = StrLen(StrArray)
+  index = Where(LenArr NE 1,count)
+  IF count GT 0 THEN RetArr=StrArray[index] ELSE RetArr=''
+  ;
+  uniqIndex = Uniq(RetArr)
+  RetArr = RetArr[uniqIndex]
+  Return,RetArr
+END
+
+;检查波段运算公式有效性
+FUNCTION GSF_CheckBandMathExpression, expression, pos=pos
+
+  COMPILE_OPT idl2
+
+  ;2019年8月12日 10:23:53
+  ;更新，不能包含b0
+  IF expression.Contains('b0',/fold_case) THEN RETURN, 0
+
+  ;2018年4月18日 11:09:10 更新记录
+  ;当公式以数字开头时，varname获取失败
+  ;修复此bug
+  tmpexp = expression
+  RefArr = [Strtrim(Indgen(10),2),'(']
+  i=0
+  n_len = STRLEN(expression)
+  FOR i=0, n_len-1 DO BEGIN
+    first_character = STRMID(tmpexp,i,1)
+    is_not_number = ~max(first_character EQ RefArr)
+    IF is_not_number THEN BREAK
+  ENDFOR
+  tmpexp = STRMID(expression, i)
+  ;---------------------------------------------
+
+  varname = GSF_Expression_Var_Extract(tmpexp)
+
+  IF varname EQ !NULL THEN RETURN, 0
+
+  ;获取波段号
+  pos = FIX(STRMID(varname, 1))-1
+  pos = pos[UNIQ(pos, SORT(pos))]
+  ;print, expression
+  ;print, pos
+
+  FOREACH element, varname DO $
+    result = Execute(element+"=indgen(5,5)")
+  ;
+  is_Right = Execute("data =" + expression, 1)
+  RETURN, is_Right
+END
+
+;根据转换red为b3等，并判断公式是否合法
+FUNCTION GSF_ConvertAndCheck_BandMathExpression, raster, expression=expression
+  COMPILE_OPT idl2
+
+  ;蓝、绿、红、近红外、短波红外
+  band_names = ['blue','green','red','nir','swir']
+  n_band_names = N_ELEMENTS(band_names)
+  result = STRARR(n_band_names) & result[*] = 'b0'
+
+  ;如果输入raster，则自动根据波长来替换变量，并判断有效性
+  IF N_ELEMENTS(raster) THEN BEGIN
+    md = raster.metadata
+    wl = md['wavelength']
+    nb = raster.nBands
+
+    ;如果有波长单位为微米
+    IF (md['wavelength units']).StartsWith('micrometer',/fold_case) THEN wl = wl*1000
+
+    ;
+    FOR i=0,nb-1 DO BEGIN
+      IF wl[i] GE 450 && wl[i] LT 510 THEN result[0]='float(b'+STRTRIM(i+1,2)+')'
+      IF wl[i] GE 520 && wl[i] LT 600 THEN result[1]='float(b'+STRTRIM(i+1,2)+')'
+      IF wl[i] GE 600 && wl[i] LT 720 THEN result[2]='float(b'+STRTRIM(i+1,2)+')'
+      IF wl[i] GE 750 && wl[i] LT 900 THEN result[3]='float(b'+STRTRIM(i+1,2)+')'
+      IF wl[i] GE 1550 && wl[i] LT 1750 THEN result[4]='float(b'+STRTRIM(i+1,2)+')'
+    ENDFOR
+
+  ENDIF ELSE BEGIN
+
+    ;如果没有输入raster，则默认转换为 b1/b2/b3/b4 等
+    result = 'b' + STRTRIM([1:n_band_names],2)
+  ENDELSE
+
+  ;替换red为bn等
+  FOR i=0, n_band_names-1 DO BEGIN
+    expression = expression.Replace(band_names[i], result[i], /fold_case)
+  ENDFOR
+
+  ;判断波段运算公式是否有效
+  is_right = GSF_CheckBandMathExpression(expression)
+
+  ;返回公式是否有效
+  RETURN, is_right
+END
+
+;提供Task，用于检查公式是否合法
+PRO GSF_CheckExpression, expression=expression, output=output
+  output = GSF_ConvertAndCheck_BandMathExpression(expression=expression)
+END
+
+;获取当前时间字符串 2019-09-02T15:48:29.02Z
+FUNCTION GSF_Generate_Timestamp, utc=utc
+
+  ;生产时间
+  CALDAT,SYSTIME(/julian,utc=utc),month,day,year,hour,minute,sec
+  sec = DOUBLE(GSF_Number_Formatter(sec))
+  timestamp_string = TIMESTAMP(year =year, month = month, day = day, $
+    hour = hour, minute = minute, second = sec)
+
+  RETURN, timestamp_string
+END
+
+;输入输出格式一样，UTC与北京时间互转
+;2019-09-02T15:48:29.02Z
+FUNCTION GSF_ConvertTime_Beijing_UTC, time_string, to_utc=to_utc, to_beijing=to_beijing
+
+  COMPILE_OPT idl2
+
+  ;获取年月日。。。
+  TIMESTAMPTOVALUES, time_string, year=year, month=month, day=day, $
+    hour=hour, minute=minute, second=second
+
+  IF KEYWORD_SET(to_utc) THEN BEGIN
+    RETURN, TIMESTAMP(year=year,month=month,day=day,hour=hour,$
+      minute=minute,second=second,/utc,offset=8)
+  ENDIF
+
+  IF KEYWORD_SET(to_beijing) THEN BEGIN
+    RETURN, TIMESTAMP(year=year,month=month,day=day,hour=hour,$
+      minute=minute,second=second,/utc,offset=-8)
+  ENDIF
+
+END
+
+;输入UTC，输出为北京时间
+FUNCTION GSF_Generate_Date_String, time, year=year, month=month, day=day, $
+  hour=hour, minute=minute, second=second, style=style
+
+  IF ~KEYWORD_SET(style) THEN style = 1
+
+  ;转换为北京时间
+  TIMESTAMPTOVALUES, GSF_ConvertTime_Beijing_UTC(time,/to_beijing), year=year, month=month, $
+    day=day, hour=hour, minute=minute, second=second
+
+  ;转换北京时间的一种方法
+  ;  result = JULDAY(month, day, year, hour, minute, second)+8.0/24
+  ;  CALDAT, result, month, day, year, hour, minute, second
+  year = STRTRIM(year,2)
+  month = STRING(month, format='(I02)')
+  day = STRING(day, format='(I02)')
+  hour = STRING(hour, format='(I02)')
+  minute = STRING(minute, format='(I02)')
+  second = STRING(second, format='(I02)')
+
+  CASE style OF
+    1: str = year+'年'+month+'月'+day+'日 '
+    2: str = year+'年'+month+'月'+day+'日 '+hour+':'+minute
+    3: str = year+'年'+month+'月'+day+'日 '+hour+':'+minute+':'+second
+    4: str = year+'年'+month+'月'
+    5: str = year+'年'
+  ENDCASE
+
+  RETURN, str
+END
+
+
+FUNCTION GSF_Number_Formatter, number, DECIMALS=decimals, no_round=no_round
+
+  On_Error, 2
+
+
+  IF N_Elements(number) EQ 0 THEN Message, 'A number must be passed as an argument to the function.'
+  IF N_Elements(decimals) EQ 0 THEN decimals = 2
+
+  ; If the number is a byte, convert it to an integer and return it.
+  IF Size(number[0], /TNAME) EQ 'BYTE' THEN RETURN, StrTrim(String(Fix(number), Format='(I3)'),2)
+
+  ; If the number is a string, trim it and return it directly.
+  IF Size(number[0], /TNAME) EQ 'STRING' THEN RETURN, StrTrim(number,2)
+
+  ; Number can be an array. Handle that here.
+  numElements = N_Elements(number)
+  retValue = StrArr(numElements)
+  FOR j=0,numElements-1 DO BEGIN
+
+    ; Is the number a NaN?
+    IF ~Finite(number[j]) THEN BEGIN
+      IF Finite(number[j], /NAN) THEN retValue[j] = 'NaN'
+      IF Finite(number[j], /Infinity) THEN retValue[j] = 'Inf'
+    ENDIF
+
+    IF number[j] LT 0.0 THEN minus = 1 ELSE minus = 0
+    theNumber = Abs(number[j])
+
+    IF KEYWORD_SET(no_round) THEN BEGIN
+      retValue[j] = STRTRIM(STRING(LONG64(theNumber*10D^decimals)/10D^decimals, format='(F100.'+STRTRIM(decimals,2)+')'),2)
+    ENDIF ELSE BEGIN
+      retValue[j] = STRTRIM(STRING(ROUND(theNumber*10D^decimals)/10D^decimals, format='(F100.'+STRTRIM(decimals,2)+')'),2)
+    ENDELSE
+
+    ; Need a minus sign?
+    IF minus THEN retValue[j] = '-' + retValue[j]
+
+  ENDFOR
+
+  IF N_Elements(retValue) EQ 1 THEN RETURN, retValue[0] ELSE RETURN, retValue
+
+END ;----------------------------------------------------------------------------------------
+
+
+
+FUNCTION GSF_Convert_S3URL_to_LocalFile,input_file,input_raster,count=count,local_test=local_test
+  COMPILE_OPT idl2
+
+  IF KEYWORD_SET(local_test) THEN BEGIN
+    files = STRSPLIT(input_file, ',', /extract, count=count)
+  ENDIF ELSE BEGIN
+    ;test code
+    ;input_file = ",s3://sentinel-s2-l1c/tiles/50/T/QP/2018/8/18/0/metadata.xml,s3://sentinel-s2-l1c/tiles/51/T/UJ/2018/8/18/0/metadata.xml"
+    ;raster1_uri = 'Z:\AWSData\WIN-D3KEVTFM7UJ\9191\2\tiles\50\T\QP\2018\8\18\0\metadata.xml'
+    s3_files = STRSPLIT(input_file, ',', /extract, count=count)
+
+    IF count EQ 1 THEN BEGIN
+      files = s3_files
+    ENDIF ELSE BEGIN
+      raster1_uri = input_raster.uri
+
+      ;获取相同的部分
+      s3_split_array=REVERSE(STRSPLIT(s3_files[0],'/\',/extract))
+      uri_split_array=REVERSE(STRSPLIT(raster1_uri,'/\',/extract))
+      same_idx = WHERE(s3_split_array EQ uri_split_array)
+      first_part = uri_split_array[N_ELEMENTS(same_idx):*]
+
+      files = raster1_uri
+      FOR i=1, count-1 DO BEGIN
+        s3_split_array=REVERSE(STRSPLIT(s3_files[i],'/\',/extract))
+        last_part = s3_split_array[same_idx]
+        local_file = STRJOIN(REVERSE([last_part, first_part]), PATH_SEP())
+        IF !VERSION.OS_FAMILY EQ 'unix' THEN local_file = PATH_SEP()+local_file
+        files = [files, local_file]
+      ENDFOR
+    ENDELSE
+
+  ENDELSE
+  RETURN, files
+END
+
+;比例尺
+;oMap - map函数返回值
+;width - 整个窗体宽度
+;yoffset - 比例尺所在位置与map的偏移量，归一化坐标
+;per_normal - 预计比例尺每格宽度占整个图像的百分比，比例尺总共4个格子
+;font_name - 字体名，默认微软雅黑
+;font_size - 默认10
+PRO GSF_ScaleBar, oMap, xoffset=xoffset, yoffset=yoffset, per_normal=per_normal, $
+  font_name=font_name, font_size=font_size, postion=postion
+
+  COMPILE_OPT idl2
+
+  IF ~KEYWORD_SET(yoffset)    THEN yoffset    = 0.1
+  IF ~KEYWORD_SET(xoffset)    THEN xoffset    = 0.003
+  IF ~KEYWORD_SET(font_size)  THEN font_size  = 10
+  IF ~KEYWORD_SET(font_name)  THEN font_name  = 'Microsoft Yahei'
+  IF ~KEYWORD_SET(per_normal) THEN per_normal = 0.08 ;预计比例尺每格宽度占整个图像的百分比，比例尺总共4个格子
+
+  width = oMap.Window.dimension[0]
+
+  IF oMap.MAP_PROJECTION EQ 'Geographic' THEN BEGIN
+    ;计算地图高、宽的跨度，单位km
+    zone = ROUND(oMap.CENTER_LONGITUDE/6+31)
+    utm_proj = MAP_PROJ_INIT('utm',zone=zone)
+    map_range = MAP_PROJ_FORWARD(oMap.xrange, oMap.yrange, map_structure=utm_proj)
+  ENDIF ELSE BEGIN
+    map_range = TRANSPOSE([[oMap.xrange], [oMap.yrange]])
+  ENDELSE
+
+  ;添加比例尺
+  map_pos = oMap.position
+
+  unit = 'km'
+  x_width_km = abs(map_range[0,0]-map_range[0,1])/1000
+  ;如果总宽度小于10km，则把单位变成米
+  IF x_width_km LT 10 THEN BEGIN
+    x_width_km = abs(map_range[0,0]-map_range[0,1])
+    unit = 'm'
+  ENDIF
+
+  ;计算比例尺信息
+  x_width_normal = map_pos[2]-map_pos[0]
+
+  x_width_one_tenth = x_width_km*per_normal/x_width_normal ;归一化坐标，0.1对应的km宽度
+  n_digit = STRLEN(STRTRIM(ULONG64(x_width_one_tenth),2))
+  factor = 10^(n_digit-1)
+  x_width_km_fixed = ROUND(x_width_one_tenth/factor)*factor
+  x_width_normal_fixed = per_normal*x_width_km_fixed/x_width_one_tenth
+
+  map_width = width*x_width_normal
+  ns_per = ROUND(x_width_normal_fixed*map_width) ;比例尺每格的像素宽度
+  scalebar_data_ns = ns_per*4 ;比例尺总宽度（像素）
+  scalebar_data_nl = scalebar_data_ns/32>5 ;比例尺高度（像素）
+  scalebar_data = BYTARR(scalebar_data_ns, scalebar_data_nl)
+  scalebar_data[(ns_per*1):(ns_per*2-1), 1:(scalebar_data_nl-2)] = 255B
+  scalebar_data[(ns_per*3):(ns_per*4-2), 1:(scalebar_data_nl-2)] = 255B
+
+  ;显示比例尺
+  scalebar = IMAGE(scalebar_data, /current)
+  scalebar.position=[map_pos[0]+scalebar_data_ns*0.5/width+xoffset,(map_pos[1]-yoffset)>0.01] ;需要修改Y坐标
+
+  ;计算比例尺文字所在位置（在图例下方）
+  scalebar_text_xpos = map_pos[0]+xoffset + [0:4]*ns_per*1.0/width
+  scalebar_text_ypos = INTARR(5)+scalebar.position[3]+0.002
+
+  ;比例尺文字设置
+  text_data = STRTRIM(x_width_km_fixed*[0:4],2)
+  text_data[-1] = STRJOIN(REPLICATE(' ',STRLEN(text_data[-1])))+text_data[-1]+unit
+
+  ;显示比例尺文字
+  scalebar_text = TEXT(scalebar_text_xpos, scalebar_text_ypos, text_data, /current, $
+    vertical_alignment=0, alignment=0.5, font_size=font_size, font_name=font_name)
+
+  ;传出比例尺位置，用于相对位置绘制其他元素
+  IF ARG_PRESENT(postion) THEN postion = [scalebar.position[0],scalebar.position[1],$
+    scalebar_text[-1].position[2],scalebar_text[-1].position[3]]
+END
+
+
+FUNCTION GSF_Geocoder_LonLat2Name, lon, lat
+  COMPILE_OPT idl2
+
+  Catch, errorStatus
+  IF (errorStatus NE 0) THEN BEGIN
+    Catch, /CANCEL
+    MESSAGE, /reset
+    RETURN, !NULL
+  ENDIF
+
+  center_lon = STRTRIM(lon,2)
+  center_lat = STRTRIM(lat,2)
+  restapi = 'http://api.map.baidu.com/geocoder/v2/?callback=renderReverse&location='+$
+    center_lat+','+center_lon+'&output=json&pois=1&ak=7f054b7329192d4b710e419da5f4a99f'
+  oURL = IDLnetURL()
+  result = oURL.Get(url=restapi, /string_array)
+  json_string = (STRSPLIT(result, '()', /extract))[1]
+  json = JSON_PARSE(json_string)
+
+  address = (json['result'])['formatted_address']
+  descrip = (json['result'])['sematic_description']
+  return, [address, descrip]
+END
+
+;'ftp://10.104.202.40:21/home/puus/PUUSWORK/Data/VIRR/L1/FY3C_L_2019_11_12_21_04_A_G_VIRRX_L1B.HDF'
+FUNCTION GSF_Download_File_form_FTP, ftp_url,  $
+  username=username, password=password,        $
+  download_dir=download_dir
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+
+  tmp_strarr = STRSPLIT(ftp_url, '/:', /extract)
+  url_hostname = tmp_strarr[1] & url_port = tmp_strarr[2]
+  url_path = '/'+STRJOIN(tmp_strarr[3:*], '/')
+
+  ftp = IDLnetURL(url_hostname=url_hostname, url_username=username, url_password=password, $
+    url_path=url_path, url_scheme='ftp')
+
+  filename=FILE_BASENAME(url_path)
+  IF KEYWORD_SET(download_dir) THEN filename=FILEPATH(filename, root_dir=download_dir)
+
+  local_file = ftp.Get(filename=filename)
+  RETURN, local_file
+END
+
+
+;根据区间统计面积
+FUNCTION GSF_StatsArea_using_AlbersProjection, raster, stats_bins=stats_bins
+  COMPILE_OPT idl2
+
+  ;转换为等面积Alber投影
+  coord_sys_str = 'PROJCS["WGS_1984_Albers",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Albers"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",110.0],PARAMETER["Standard_Parallel_1",27.0],PARAMETER["Standard_Parallel_2",45.0],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]'
+  coordSys = ENVICoordSys(coord_sys_str=coord_sys_str)
+  albers_raster = ENVIReprojectRaster(raster, coord_sys=CoordSys)
+
+  ;两种情况，统计区间 和 分类图像
+  CASE KEYWORD_SET(stats_bins) OF
+    ;统计区间
+    1: BEGIN
+
+      n_bins = N_ELEMENTS(stats_bins)-1
+      data = albers_raster.GetData() & stats_n_pixels = !NULL &
+      FOR j=0, n_bins-1 DO BEGIN
+        !NULL = WHERE(data GE stats_bins[j] AND data LT stats_bins[j+1], count)
+        stats_n_pixels = [stats_n_pixels, count]
+      ENDFOR
+      data = !NULL
+      stats_areas = stats_n_pixels*PRODUCT(albers_raster.spatialref.pixel_size)/1e6
+
+    END
+    ;统计分类图像
+    0: BEGIN
+
+      stats = ENVIRasterStatistics(albers_raster, histogram_binsize=1)
+      stats_areas = ((stats['HISTOGRAMS'])[0])['COUNTS']*PRODUCT(albers_raster.spatialref.pixel_size)/1e6
+
+    END
+  ENDCASE
+
+  albers_raster.Close
+  RETURN, stats_areas
+END
+
+
+FUNCTION GSF_GetUUID_from_Json_by_ROICoords, roi_coords, config_fname
+  COMPILE_OPT idl2
+  ON_ERROR, 2
+  e=envi(/current)
+
+  roi_coords_string = GSF_ROICoords2String(roi_coords)
+  uuid = STRMID(FILE_BASENAME(e->GetTemporaryFilename('')), 12,24)
+  GSF_GetGSFConfig, config_json_uri=config_json_uri
+  config_file = FILEPATH(config_fname, root_dir=FILE_DIRNAME(config_json_uri))
+  CASE FILE_TEST(config_file) OF
+    1: BEGIN
+      ;如果文件存在
+      ;读取里边的信息，判断是否已存在本条纪录
+      config_hash = JSON_PARSE(config_file)
+      keys = config_hash.Keys()
+      idx = keys.Where(roi_coords_string)
+      IF idx EQ !NULL THEN BEGIN
+        ;如果不存在记录，则添加新的记录
+        config_hash += ORDEREDHASH(roi_coords_string, ORDEREDHASH('roi_coords', roi_coords, 'id', uuid))
+        OPENW,lun,config_file,/get_lun
+        PRINTF,lun,JSON_SERIALIZE(config_hash)
+        FREE_LUN,lun
+      ENDIF ELSE BEGIN
+        ;如果已存在记录，则获取id，作为输出目录
+        uuid = (config_hash[keys[idx[0]]])['id']
+      ENDELSE
+    END
+    0: BEGIN
+      ;将信息写入文件中
+      config_hash = ORDEREDHASH(roi_coords_string, ORDEREDHASH('roi_coords', roi_coords, 'id', uuid))
+      OPENW,lun,config_file,/get_lun
+      PRINTF,lun,JSON_SERIALIZE(config_hash)
+      FREE_LUN,lun
+    END
+  ENDCASE
+
+  RETURN, uuid
+END
+
+
+;修复经纬度栅格
+PRO GSF_Repair_LonLatRaster, lon_raster, lat_raster, $
+  delete_lat_raster=delete_lat_raster,               $
+  delete_lon_raster=delete_lon_raster
+
+  COMPILE_OPT idl2
+  ON_ERROR,2
+
+  delete_lat_raster = 0
+  delete_lon_raster = 0
+
+  lat_data = lat_raster.GetData(sub_rect=[lat_raster.nColumns/2,0,lat_raster.nColumns/2,lat_raster.nRows-1])
+  lon_data = lon_raster.GetData(sub_rect=[lon_raster.nColumns/2,0,lon_raster.nColumns/2,lon_raster.nRows-1])
+  bad_lines = WHERE(lon_data LT -180 OR lon_data GT 180 OR lat_data LT -90 OR lat_data GT 90, count)
+  lat_bad_lines = bad_lines & lon_bad_lines = bad_lines
+
+  IF lat_bad_lines[0] NE -1 THEN BEGIN
+    lat_data = lat_raster.GetData()
+    FOR i=0,count-1 DO BEGIN
+      CASE lat_bad_lines[i] OF
+        0:  lat_data[*,0] = lat_data[*,1]
+        lat_raster.nRows-1: lat_data[*,-1] = lat_data[*,-2]
+        ELSE: BEGIN
+          front_flag = ~MAX(lat_bad_lines[i]-1 EQ lat_bad_lines) ;1表示正常值，0表示异常值
+          next_flag =  ~MAX(lat_bad_lines[i]+1 EQ lat_bad_lines)
+          lat_data[*,lat_bad_lines[i]] = (front_flag*lat_data[*,lat_bad_lines[i]-1]+ $
+            next_flag*lat_data[*,lat_bad_lines[i]+1])/(front_flag+next_flag)
+        END
+      ENDCASE
+      lat_bad_lines[i] = -1
+    ENDFOR
+    pre_lat_raster=lat_raster
+    lat_raster = ENVIRaster(lat_data, INHERITS_from=pre_lat_raster)
+    lat_raster.Save & pre_lat_raster.Close
+    lat_data = !NULL
+    delete_lat_raster = 1
+  ENDIF
+
+  IF lon_bad_lines[0] NE -1 THEN BEGIN
+    lon_data = lon_raster.GetData()
+    FOR i=0,count-1 DO BEGIN
+      CASE lon_bad_lines[i] OF
+        0:  lon_data[*,0] = lon_data[*,1]
+        lon_raster.nRows-1: lon_data[*,-1] = lon_data[*,-2]
+        ELSE: BEGIN
+          front_flag = ~MAX(lon_bad_lines[i]-1 EQ lon_bad_lines) ;1表示正常值，0表示异常值
+          next_flag =  ~MAX(lon_bad_lines[i]+1 EQ lon_bad_lines)
+          lon_data[*,lon_bad_lines[i]] = (front_flag*lon_data[*,lon_bad_lines[i]-1]+ $
+            next_flag*lon_data[*,lon_bad_lines[i]+1])/(front_flag+next_flag)
+        END
+      ENDCASE
+      lon_bad_lines[i] = -1
+    ENDFOR
+    pre_lon_raster=lon_raster
+    lon_raster = ENVIRaster(lon_data, INHERITS_from=pre_lon_raster)
+    lon_raster.Save & pre_lon_raster.Close
+    lon_data = !NULL
+    delete_lon_raster = 1
+  ENDIF
+
+END

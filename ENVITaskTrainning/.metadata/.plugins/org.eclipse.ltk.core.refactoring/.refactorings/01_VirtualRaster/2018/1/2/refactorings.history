@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“01_VirtualRaster/aaa.pro”重命名为“aaaaa.pro”" description="重命名资源“aaa.pro”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="aaa.pro" name="aaaaa.pro" stamp="1515466870945" updateReferences="true"/>
+</session>

@@ -1,0 +1,75 @@
+PRO test_Water_Extraction
+  COMPILE_OPT idl2
+  e=ENVI()
+
+  file = FILE_DIRNAME(ROUTINE_FILEPATH())+$
+    '\data\beijing_miyun.dat'
+  input_raster = e.OpenRaster(file)
+
+  view = e.GetView()
+  layer =view.CreateLayer(input_raster)
+  view.zoom, 1, /full_extent
+
+  ;几个参数
+  thresholdValue = 0.0
+  smoothSize     = 5
+  minArea        = 1.3
+  Apply_QUAC     = 0
+  output_raster_uri = e.GetTemporaryFilename()
+
+  ;首先判断是否包含计算MNDWI的波段，不需要先QUAC
+  mndwiRaster = ENVISpectralIndexRaster(input_raster, 'mndwi')
+  ;
+  IF Apply_QUAC THEN BEGIN
+    QUACTask = ENVITask('QUAC')
+    QUACTask.INPUT_RASTER = input_raster
+    QUACTask.Execute
+    ;计算mndwi
+    mndwiRaster = ENVISpectralIndexRaster(QUACTask.OUTPUT_RASTER, 'mndwi')
+  ENDIF
+
+  ;密度分割，提取水体
+  ColorSliceTask = ENVITASK('ColorSliceClassification')
+  ColorSliceTask.INPUT_RASTER = mndwiRaster
+  ColorSliceTask.DATA_MINIMUM = thresholdValue
+  ColorSliceTask.NUMBER_OF_RANGES = 1
+  ColorSliceTask.Execute
+
+  ;;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  SmoothTask.INPUT_RASTER = ColorSliceTask.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = smoothSize
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  ref = input_raster.SPATIALREF
+  aggregateSize = ref EQ !NULL ? 50 : minArea*1000000/PRODUCT(ref.PIXEL_SIZE)
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.MINIMUM_SIZE = aggregateSize > 9
+  AggregationTask.OUTPUT_RASTER_URI = output_raster_uri
+  AggregationTask.EXECUTE
+
+  ;更新元数据信息
+  waterRaster = e.OpenRaster(output_raster_uri)
+  waterRaster.METADATA.UpdateItem, $
+    'class names', ['Background', 'Water']
+  waterRaster.METADATA.UpdateItem, $
+    'class lookup', [[0,0,0],[255,0,0]]
+  waterRaster.METADATA.AddItem, $
+    'data ignore value', 0, error=err
+  waterRaster.WriteMetadata
+
+  ;显示结果
+  view = e.GetView()
+  waterLayer = view.CreateLayer(waterRaster)
+
+  ;  ClassStatistics_and_Barplot, waterRaster, [1]
+
+  ;转换为Shapefile
+  ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+  ClassToVectorTask.INPUT_RASTER = waterRaster
+  ClassToVectorTask.EXPORT_CLASSES = ['Water']
+  ClassToVectorTask.EXECUTE
+  waterShpLayer = view.CreateLayer(ClassToVectorTask.OUTPUT_VECTOR)
+END

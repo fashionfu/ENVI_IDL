@@ -1,0 +1,30 @@
+var axios = require("axios");
+
+function reqJson1() {
+    const options = {
+        method: "POST",
+        url: "http://localhost:9191/jobs",
+        headers: {"content-type": "application/json"},
+        data: {
+          "serviceName": "ENVI",
+          "taskName": "GSF_Change_Detection",
+          "inputParameters": {
+				input_file1: "C:\\ENVITest\\ESECommon\\ChangeDetection\\oct_07_2002_quac.dat",
+				input_file2: "C:\\ENVITest\\ESECommon\\ChangeDetection\\aug_25_2007_quac.dat",
+				detect_method: "FeatureDifference",
+				feature_index: "NDVI",
+				export_shapefile: "Yes"
+          }
+        }
+    };
+
+    axios.request(options).then(function (response) {
+        console.log(response.data);
+    }).catch(function (error) {
+        console.error(error);
+    });
+}
+
+(() => {
+    reqJson1()
+})();

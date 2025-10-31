@@ -1,0 +1,26 @@
+PRO test_BuildLayerStack
+  COMPILE_OPT idl2
+  e = ENVI()
+
+  ;输入文件路径
+  file = FILEPATH('qb_boulder_msi', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  ;打开栅格图像
+  raster = e.OpenRaster(file)
+  
+  ;计算NDVI
+  ndvi_raster = ENVISpectralIndexRaster(raster, 'NDVI')
+  
+  ;波段组合
+  Task = ENVITask('BuildLayerStack')
+  Task.INPUT_RASTERS = [raster, ndvi_raster]
+  Task.Execute
+
+  ;将结果添加到Data Manager
+  DataColl = e.DATA
+  DataColl.Add, Task.OUTPUT_RASTER
+
+  ;显示结果
+  View1 = e.GetView()
+  Layer1 = View1.CreateLayer(Task.OUTPUT_RASTER)
+END

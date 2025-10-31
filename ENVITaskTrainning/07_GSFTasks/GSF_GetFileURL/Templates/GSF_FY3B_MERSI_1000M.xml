@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3B_MERSI_1000M">
+    <RASTER interleave="bsq">
+      <DATASET>/EV_250_Aggr.1KM_RefSB</DATASET>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+	  <METADATA name="VIR_Cal_Coeff" id="//VIR_Cal_Coeff"/>
+      <XGRID>/Longitude</XGRID>
+      <YGRID>/Latitude</YGRID>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>/EV_1KM_RefSB</DATASET>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+      <XGRID>/Longitude</XGRID>
+      <YGRID>/Latitude</YGRID>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>/EV_250_Aggr.1KM_Emissive</DATASET>
+      <METADATA name="Slope" id="/EV_250_Aggr.1KM_Emissive/Slope"/>
+      <METADATA name="Intercept" id="/EV_250_Aggr.1KM_Emissive/Intercept"/>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+      <XGRID>/Longitude</XGRID>
+      <YGRID>/Latitude</YGRID>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>/SolarZenith</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

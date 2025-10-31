@@ -1,0 +1,31 @@
+{
+  "name":"GSF_ZipFileService",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_ZipFileService",
+  "display_name":"GSF_ZipFileService",
+  "description":"GSF_ZipFileService",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_file",
+      "display_name":"Input File",
+      "type":"string",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output_path",
+      "display_name":"Output Path",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"zipfile_url",
+      "display_name":"Output Information",
+      "type":"string",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

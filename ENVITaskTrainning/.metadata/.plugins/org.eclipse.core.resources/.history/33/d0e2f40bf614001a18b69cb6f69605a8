@@ -1,0 +1,24 @@
+{
+  "name":"GSF_CheckExpression",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_CheckExpression",
+  "display_name":"GSF Check Band Math Expression",
+  "description":"GSF_CheckExpression",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"expression",
+      "display_name":"expression",
+      "type":"string",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output",
+      "display_name":"output",
+      "type":"byte",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name":"BuildFootprint",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"ENVIBuildFootprintTask",
+  "displayName":"Build Footprint",
+  "description":"This is a custom task that performs build raster footprint.",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "displayName":"Input Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the input raster."
+    },
+    {
+      "name":"Background_Value",
+      "displayName":"Background Value",
+      "dataType":"double",
+      "direction":"input",
+      "defaultValue":0.00,
+      "parameterType":"required",
+      "description":"Specify the background value."
+    },
+    {
+      "name":"OUTPUT_VECTOR",
+      "displayName":"Output Vector",
+      "dataType":"ENVIVector",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"This is a reference to the output vector."
+    }
+  ]
+}

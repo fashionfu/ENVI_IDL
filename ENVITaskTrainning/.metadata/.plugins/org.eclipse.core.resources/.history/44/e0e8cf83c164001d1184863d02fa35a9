@@ -1,0 +1,67 @@
+PRO test_Veg_Extraction
+  COMPILE_OPT idl2
+  e=ENVI()
+
+  file = FILE_DIRNAME(ROUTINE_FILEPATH())+$
+    '\data\beijing_miyun.dat'
+  input_raster = e.OpenRaster(file)
+  
+  ;阈值，不同数据不一样。而且这种方法只能区分植被、非植被。无法区分林地和其他植被。
+  threshold_value = 0.4 
+
+  view = e.GetView()
+  layer =view.CreateLayer(input_raster)
+  view.zoom, 1, /full_extent
+
+  ;输出栅格结果
+  output_raster_uri = e.GetTemporaryFilename(/cleanup_on_exit)
+  ;输出矢量结果
+  output_vector_uri = e.GetTemporaryFilename('shp', /cleanup_on_exit)
+  print, output_raster_uri
+  print, output_vector_uri
+  
+  ;快速大气校正
+  quacRaster = ENVIQUACRaster(input_raster)
+
+  ;计算NDVI
+  ndviRaster = ENVISpectralIndexRaster(quacRaster, 'NDVI')
+
+  ;密度分割，提取水体
+  ColorSliceTask = ENVITASK('ColorSliceClassification')
+  ColorSliceTask.INPUT_RASTER = ndviRaster
+  ColorSliceTask.DATA_MINIMUM = threshold_value
+  ColorSliceTask.NUMBER_OF_RANGES = 1
+  ColorSliceTask.Execute
+
+  ;;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  SmoothTask.INPUT_RASTER = ColorSliceTask.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = 3
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.MINIMUM_SIZE = 100
+  AggregationTask.OUTPUT_RASTER_URI = output_raster_uri
+  AggregationTask.EXECUTE
+
+  ;更新元数据信息
+  vegRaster = e.OpenRaster(output_raster_uri)
+  vegRaster.METADATA.UpdateItem, 'class names', ['Background', 'Veg']
+  vegRaster.METADATA.UpdateItem, 'class lookup', [[0,0,0],[255,0,0]]
+  vegRaster.METADATA.AddItem, 'data ignore value', 0, error=err
+  vegRaster.WriteMetadata
+
+  ;显示结果
+  view = e.GetView()
+  waterLayer = view.CreateLayer(vegRaster)
+
+  ;转换为Shapefile
+  ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+  ClassToVectorTask.INPUT_RASTER = vegRaster
+  ClassToVectorTask.EXPORT_CLASSES = ['Veg']
+  ClassToVectorTask.EXECUTE
+  
+  waterShpLayer = view.CreateLayer(ClassToVectorTask.OUTPUT_VECTOR)
+END

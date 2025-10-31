@@ -1,0 +1,16 @@
+COMPILE_OPT IDL2
+e = ENVI(/CURRENT)
+
+taskfile = FILEPATH('VFCTask.task', root_dir=ROUTINE_DIR())
+Task = ENVITask(taskfile)
+Result = e.UI.SelectTaskParameters(Task)
+;
+IF Result NE 'OK' THEN return
+
+Task.Execute
+
+;ÏÔÊ¾½á¹û
+e.Data.Add, Task.OUTPUT_RASTER
+view = e.GetView()
+layer = view.CreateLayer(Task.OUTPUT_RASTER)
+END

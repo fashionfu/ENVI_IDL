@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3C_VIRR_GEO">
+    <RASTER interleave="bsq">
+      <DATASET>/Geolocation/Longitude</DATASET>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>/Geolocation/Latitude</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

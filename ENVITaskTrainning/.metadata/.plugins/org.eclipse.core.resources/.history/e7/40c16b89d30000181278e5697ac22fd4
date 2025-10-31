@@ -1,0 +1,35 @@
+{
+  "name":"IsoData",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"IsoData",
+  "display_name":"IsoData",
+  "description":"Use this template as a reference when building tasks for a new procedure.",
+  "schema":"envitask_3.1",
+  "parameters":[
+    {
+      "name":"file",
+      "display_name":"Input Raster",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "description":"Specify an input raster to process."
+    },
+    {
+      "name":"n_classes",
+      "display_name":"Num Classes",
+      "type":"uint",
+      "direction":"input",
+      "required":false,
+      "default":5,
+      "description":"Specify the method to use for processing. Default is Method Three."
+    }
+    {
+      "name":"output_path",
+      "display_name":"Output Path",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "description":"Specify a byte array of [3,256]."
+    }
+  ]
+}

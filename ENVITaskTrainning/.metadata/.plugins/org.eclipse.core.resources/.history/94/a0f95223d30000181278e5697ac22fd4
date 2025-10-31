@@ -1,0 +1,86 @@
+{
+  "name":"IsoData",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"IsoData",
+  "display_name":"IsoData",
+  "description":"Use this template as a reference when building tasks for a new procedure.",
+  "schema":"envitask_3.1",
+  "parameters":[
+    {
+      "name":"file",
+      "display_name":"Input Raster",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "description":"Specify an input raster to process."
+    },
+    {
+      "name":"n_classes",
+      "display_name":"Num Classes",
+      "type":"uint",
+      "direction":"input",
+      "required":false,
+      "choice_list":[
+        "Method One",
+        "Method Two",
+        "Method Three"
+      ],
+      "default":"Method Three",
+      "description":"Specify the method to use for processing. Default is Method Three."
+    },
+    {
+      "name":"INPUT_STATIC_ARRAY",
+      "display_name":"Input array of [3,256]",
+      "type":"BYTEArray",
+      "dimensions":"[3,256]",
+      "direction":"input",
+      "required":false,
+      "description":"Specify a byte array of [3,256]."
+    },
+    {
+      "name":"INPUT_DYNAMIC_ARRAY",
+      "display_name":"Input array of [3,n]",
+      "type":"BYTEArray",
+      "dimensions":"[3,*]",
+      "direction":"input",
+      "required":false,
+      "description":"Specify a byte array of [3,n]."
+    },
+    {
+      "name":"INPUT_BOOLEAN",
+      "display_name":"Input True or False",
+      "type":"BOOL",
+      "direction":"input",
+      "required":true,
+      "default":true,
+      "description":"Specify true or false for the parameter."
+    },
+    {
+      "name":"INPUT_RANGE",
+      "display_name":"Input range w/max and min",
+      "type":"UINT",
+      "direction":"input",
+      "required":false,
+      "min":0,
+      "max":100,
+      "description":"Specify an integer between 0 and 100."
+    },
+    {
+      "name":"INPUT_MINIMUM",
+      "display_name":"Input w/minimum",
+      "type":"FLOAT",
+      "direction":"input",
+      "required":false,
+      "min":1.0,
+      "description":"Specify floating number greater than or equal to 1.0."
+    },
+    {
+      "name":"OUTPUT_URI",
+      "display_name":"Output filename",
+      "type":"ENVIURI",
+      "direction":"output",
+      "required":true,
+      "description":"Specify the output filename."
+    }
+  ]
+}

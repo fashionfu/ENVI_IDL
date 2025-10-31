@@ -1,0 +1,46 @@
+{
+  "name":"GSF_UnZip_Task",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_UnZip_Task",
+  "display_name":"GSF UnZip Task",
+  "description":"GSF UnZip Task",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_file",
+      "display_name":"input_file",
+      "type":"string",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output_path",
+      "display_name":"output_path",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"unzip_directly",
+      "display_name":"unzip_directly",
+      "type":"boolean",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"mss_file",
+      "display_name":"mss_file",
+      "type":"string",
+      "direction":"output",
+      "required":false
+    },
+    {
+      "name":"pan_file",
+      "display_name":"pan_file",
+      "type":"string",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

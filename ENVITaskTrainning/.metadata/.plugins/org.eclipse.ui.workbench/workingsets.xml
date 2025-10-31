@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workingSetManager>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1544082943614_4" label="Evaluaion_license" name="Evaluaion_license"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1553671242104_4" label="Classification Framework" name="Classification Framework"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1563863723528_5" label="TVDI" name="TVDI"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1566529050182_6" label="Display_from_ITT_FTP" name="Display_from_ITT_FTP"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1567065176055_7" label="ESE_GSF_Tasks" name="ESE_GSF_Tasks"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1568250675996_8" label="China Satellites Support" name="China Satellites Support"/>
+<workingSet editPageId="org.eclipse.ui.resourceWorkingSetPage" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1568951398876_9" label="tasks" name="tasks">
+<item factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/_temp/tasks" type="2"/>
+</workingSet>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1409196513528_0" label="窗口工作集" name="Aggregate for window 1409196513518"/>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1463558316452_1" label="窗口工作集" name="Aggregate for window 1463558316452"/>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1463561913263_2" label="窗口工作集" name="Aggregate for window 1463561913263"/>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1575285300111_10" label="窗口工作集" name="Aggregate for window 1515421188400"/>
+<workingSet aggregate="true" factoryID="org.eclipse.ui.internal.WorkingSetFactory" id="1668413689806_11" label="窗口工作集" name="Aggregate for window 1668413689806"/>
+</workingSetManager>

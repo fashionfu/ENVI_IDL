@@ -1,0 +1,32 @@
+PRO test_BuildLayerStack
+  COMPILE_OPT idl2
+  e = ENVI()
+
+  ;输入文件路径
+  mss_file=FILEPATH('qb_boulder_msi', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  pan_file=FILEPATH('qb_boulder_pan', $
+    ROOT_DIR=e.ROOT_DIR, SUBDIRECTORY=['data'])
+  ;打开栅格图像
+  mss_raster=e.OpenRaster(mss_file)
+  pan_raster=e.OpenRaster(pan_file)
+
+  ;获取多光谱空间参考信息
+  ;  gridTask = ENVITask('BuildGridDefinitionFromRaster')
+  ;  gridTask.INPUT_RASTER = mss_raster
+  ;  gridTask.Execute
+
+  ;波段组合
+  Task = ENVITask('BuildLayerStack')
+  Task.INPUT_RASTERS = [mss_raster, pan_raster]
+  ;  Task.GRID_DEFINITION = gridTask.OUTPUT_GRIDDEFINITION
+  Task.Execute
+
+  ;将结果添加到Data Manager
+  DataColl = e.DATA
+  DataColl.Add, Task.OUTPUT_RASTER
+
+  ;显示结果
+  View1 = e.GetView()
+  Layer1 = View1.CreateLayer(Task.OUTPUT_RASTER)
+END

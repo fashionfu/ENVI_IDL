@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RegionsOfInterest version="1.0">
+  <Region name="居民用地" color="145,145,145">
+    <GeometryDef>
+      <CoordSysStr>PROJCS["UTM_Zone_11N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-117.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+635590.00690447 3650674.17606561 638510.60939482 3650743.95155173 638440.83390871 3649198.92293055 636198.05042635 3649129.14744444 635590.00690447 3650674.17606561
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+634029.8239199 3629515.88907962 635473.17968988 3629460.06869073 635441.2823248 3627235.22747623 634125.51601515 3627235.22747623 634029.8239199 3629515.88907962
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="水体" color="0,0,196">
+    <GeometryDef>
+      <CoordSysStr>PROJCS["UTM_Zone_11N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-117.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+638204.71437312 3641609.06767872 638240.95315968 3641592.96155136 638240.95315968 3641383.58189568 638200.68784128 3641383.58189568 638204.71437312 3641609.06767872
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645331.6502016 3634466.93227008 645368.5142016 3634479.22027008 645515.9702016 3634454.64427008 645319.3622016 3634036.85227008 645331.6502016 3634466.93227008
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+638371.05842259 3660951.10837808 638560.44902776 3661349.82544161 638570.41695435 3661349.82544161 638590.35280753 3661329.88958844 639128.62084329 3661040.81971738 638829.58304565 3660681.9743602 638371.05842259 3660951.10837808
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="休耕地/裸地" color="255,255,29">
+    <GeometryDef>
+      <CoordSysStr>PROJCS["UTM_Zone_11N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-117.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+643513.7472 3642114.576 643693.7472 3642084.576 644023.7472 3642054.576 643963.7472 3641634.576 643573.7472 3641604.576 643513.7472 3642114.576
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+653869.6351872 3649536.2270976 654379.6351872 3649536.2270976 654409.6351872 3649116.2270976 653899.6351872 3649146.2270976 653869.6351872 3649536.2270976
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+626745 3635880 627315 3635880 627315 3635670 626745 3635670 626745 3635880
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+625981.272 3633881.088 626519.60571429 3633851.12533333 626561.016 3633611.424 626022.68228571 3633626.40533333 626022.68228571 3633611.424 625981.272 3633881.088
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+641054.09783085 3642485.12192474 641387.54499885 3642497.70483674 641337.21335085 3641918.89088474 641054.09783085 3641937.76525274 641054.09783085 3642485.12192474
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+629741.845056 3620580.216384 629949.463104 3620573.924928 629962.046016 3619875.573312 629685.221952 3619881.864768 629741.845056 3620580.216384
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+635651.60557581 3676575.46729534 637059.5752064 3676563.0073871 637034.65538993 3675915.09215887 635713.90511699 3675977.39170004 635651.60557581 3676575.46729534
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+634206.25622051 3663567.32309769 634991.23043934 3663629.62263887 635502.08667699 3663318.12493299 635539.46640169 3662171.81337534 634268.55576169 3662234.11291651 634206.25622051 3663567.32309769
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+649795.93765566 3649489.18428034 650379.99585419 3649411.30985387 650418.93306743 3648866.18886857 649854.34347551 3648846.72026196 649795.93765566 3649489.18428034
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+652482.6053689 3642324.73704504 652735.69725493 3642324.73704504 652794.10307478 3641662.80442004 652482.6053689 3641662.80442004 652482.6053689 3642324.73704504
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645450.5446586 3625570.0541899 646057.96518507 3625570.0541899 646089.11495566 3625242.98159872 645497.26931449 3625149.53228696 645450.5446586 3625570.0541899
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="留茬耕地" color="153,99,0">
+    <GeometryDef>
+      <CoordSysStr>PROJCS["UTM_Zone_11N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-117.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645351.528 3662925 645287.112 3662355 644836.2 3662415 644836.2 3662955 645351.528 3662925
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+632911.128 3652173.912 633451.128 3652173.912 633511.128 3652023.912 632941.128 3651963.912 632911.128 3652173.912
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+624843.576 3665816.328 625173.576 3665786.328 625143.576 3665456.328 624963.576 3665426.328 624843.576 3665816.328
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+624667.896 3639187.2016 624736.18690909 3639109.1792 624997.96872727 3639265.224 625009.35054545 3639265.224 625043.496 3638836.1008 625043.496 3638797.0896 624690.65963636 3638680.056 624667.896 3639187.2016
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645159.7536 3642959.5584 645369.7536 3642959.5584 645759.7536 3642959.5584 645669.7536 3642419.5584 645249.7536 3642419.5584 645159.7536 3642959.5584
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+632025.85847085 3655810.42573274 632692.75280685 3655854.46592474 632680.16989485 3655571.35040474 632006.98410285 3655577.64186074 632025.85847085 3655810.42573274
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+635215.50878757 3662009.83456828 635389.94750287 3662009.83456828 635414.86731934 3661299.61979887 635203.04887934 3661312.0797071 635215.50878757 3662009.83456828
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+634405.61475228 3657038.3311824 635016.15025581 3657038.3311824 635016.15025581 3656913.73210004 634405.61475228 3656851.43255887 634405.61475228 3657038.3311824
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+649702.4883439 3621645.18309578 650154.16001743 3621691.90775166 650138.58513213 3621520.58401343 649593.46414684 3621473.85935754 649702.4883439 3621645.18309578
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+646789.9847939 3622346.05293401 646976.88341743 3622361.62781931 646961.30853213 3621800.93194872 646758.83502331 3621754.20729284 646789.9847939 3622346.05293401
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+642647.06530566 3621489.43424284 642942.98812625 3621551.73378401 642911.83835566 3620882.01371637 642693.78996154 3620882.01371637 642647.06530566 3621489.43424284
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="绿植耕地" color="0,196,0">
+    <GeometryDef>
+      <CoordSysStr>PROJCS["UTM_Zone_11N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-117.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645750 3657090 646140 3657090 646110 3656640 645750 3656640 645750 3657090
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+651467.712 3649537.872 651647.712 3649477.872 651977.712 3649477.872 652037.712 3649027.872 651467.712 3649027.872 651467.712 3649537.872
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+646620 3656310 646950 3656310 646950 3655950 646590 3655890 646620 3656310
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+630560.856 3652150.152 630980.856 3652060.152 631010.856 3651610.152 630560.856 3651580.152 630560.856 3652150.152
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+626259.576 3650695.08 626769.576 3650725.08 626769.576 3650575.08 626319.576 3650485.08 626289.576 3650485.08 626289.576 3650455.08 626259.576 3650695.08
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+641366.184 3637530 641633.1056 3637530 641681.6368 3637530 641705.9024 3637530 641730.168 3637140 641438.9808 3637080 641366.184 3637530
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+637635 3664467 637905 3664407 637935 3664407 638265 3664017 637815 3663867 637635 3664467
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+641862.40634605 3625521.79441361 642440.11299022 3625521.79441361 642485.2463218 3624953.11443576 641862.40634605 3624971.16776839 641862.40634605 3625521.79441361
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+626879.83017816 3667180.69648593 627565.1251311 3667155.77666946 627565.1251311 3666956.41813769 626942.12971934 3666931.49832122 626879.83017816 3667180.69648593
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+649951.6865086 3640183.1903171 650457.87028066 3640163.72171049 650574.68192037 3639618.60072519 650049.02954169 3639521.2576921 649951.6865086 3640183.1903171
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+645466.1195439 3622392.7775899 645871.06656154 3622408.35247519 646042.39029978 3622081.27988401 645606.29351154 3622112.4296546 645466.1195439 3622392.7775899
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+</RegionsOfInterest>

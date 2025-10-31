@@ -1,0 +1,105 @@
+;本程序需要 ENVI 5.6.3 版本，并且安装了 ENVI Deep Learning 2.0
+PRO test_RandomForest_Batch
+  COMPILE_OPT IDL2
+  e = ENVI()
+
+  IF e.VERSION LT '5.6.3' THEN BEGIN
+    PRINT, 'Warning: 本程序需要 ENVI 5.6.3 版本，并且安装了 ENVI Deep Learning 2.0'
+    RETURN
+  ENDIF
+
+  ;获取路径
+  data_dir = FILEPATH('data', root_dir=ROUTINE_DIR())
+  output_dir = FILEPATH('output', root_dir=ROUTINE_DIR())
+
+  ;打开图像
+  file = FILEPATH('LasVegasMay2010.dat', root_dir=data_dir)
+  raster = e.OpenRaster(file)
+
+  ;打开样本
+  roifile = FILEPATH('LasVegasMay2010_rois.xml', root_dir=data_dir)
+  rois = e.OpenROI(roifile)
+
+  ;统计栅格
+  StatsTask = ENVITask('NormalizationStatistics')
+  StatsTask.INPUT_RASTERS = raster
+  StatsTask.Execute
+
+  ;获取训练数据
+  DataPrepTask = ENVITask('MLTrainingDataFromROIs')
+  DataPrepTask.INPUT_RASTER = raster
+  DataPrepTask.INPUT_ROI = rois
+  DataPrepTask.NORMALIZE_MIN_MAX = StatsTask.Normalization
+  DataPrepTask.Execute
+
+  ;训练随机森林模型
+  TrainTask = ENVITask('TrainRandomForest')
+  TrainTask.INPUT_RASTER = DataPrepTask.OUTPUT_RASTER
+  TrainTask.NUM_ESTIMATORS = 100
+  TrainTask.Execute
+  outputModelUri = TrainTask.OUTPUT_MODEL_URI
+
+  PRINT, 'Model URI: ' + outputModelUri
+
+  ;搜索所有图像文件
+  files = FILE_SEARCH(data_dir, '*.hdr', count=count)
+
+  View = e.GetView()
+
+  ;进度条
+  Channel = e.GetBroadcastChannel()
+  Abort = ENVIAbortable()
+  Start = ENVIStartMessage('Machine Learning Classification', Abort)
+  Channel.Broadcast, Start
+
+  errMsgs = !NULL ;错误消息
+
+  ;批量分类
+  ;初始化分类Task
+  ClassifyTask = ENVITask('MachineLearningClassification')
+  FOREACH element, files, i DO BEGIN
+
+    ;错误处理，如果出现错误，记录错误文件和错误信息，继续下一个处理
+    CATCH, errorStatus
+    IF (errorStatus NE 0) THEN BEGIN
+      CATCH, /CANCEL
+      errMsgs = [errMsgs, element +' --- '+ !ERROR_STATE.MSG]
+      MESSAGE, /RESET
+      CONTINUE
+    ENDIF
+
+    ;进度条信息
+    percentProgress = ROUND((i+1)* 100.0/count)
+    infostr = STRTRIM(i+1,2)+'/'+STRTRIM(count,2)+': '+FILE_BASENAME(element)
+    Progress = ENVIPROGRESSMESSAGE(infostr, percentProgress, Abort)
+    Channel.Broadcast, Progress
+    IF (Abort.ABORT_REQUESTED) THEN BREAK
+
+    ;打开栅格
+    input_raster = e.OpenRaster(element)
+
+    ;设置输出路径
+    fbasename = FILE_BASENAME(element, '.hdr')
+    output_uri = FILEPATH(fbasename+'_rfc.dat', root_dir=output_dir)
+
+    ;设置参数
+    ClassifyTask.INPUT_RASTER = input_raster
+    ClassifyTask.INPUT_MODEL = TrainTask.OUTPUT_MODEL
+    ClassifyTask.OUTPUT_RASTER_URI = output_uri
+    ClassifyTask.Execute
+    e.Data.Add, ClassifyTask.OUTPUT_RASTER
+    Layer = View.CreateLayer(ClassifyTask.OUTPUT_RASTER)
+  ENDFOREACH
+
+  ;进度条完成
+  Finish = ENVIFINISHMESSAGE(Abort)
+  Channel.Broadcast, Finish
+
+  ;显示出错文件及对应的报错信息
+  IF errMsgs NE !NULL THEN BEGIN
+    base = WIDGET_AUTO_BASE(title='ENVI Error Report')
+    ws = WIDGET_SLABEL(base, prompt=['Input Filename ---- Error Message', $
+      errMsgs], XSIZE=100, YSIZE=20)
+    WIDGET_CONTROL, base, /realize
+  ENDIF
+END

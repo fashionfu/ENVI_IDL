@@ -1,0 +1,82 @@
+PRO test_ChangeDetection
+
+  COMPILE_OPT idl2
+  e=ENVI()
+
+  ;第一和第二时相数据
+  path = FILE_DIRNAME(ROUTINE_FILEPATH())+'\data\'
+  inputFile1 = path+'july_00_quac.img'
+  inputFile2 = path+'july_06_quac.img'
+
+  ;输出文件路径
+  outputFile = e.GetTemporaryFilename(/cleanup_on_exit)
+  PRINT, outputFile
+
+  Raster1 = e.OPENRASTER(inputFile1)
+  Raster2 = e.OPENRASTER(inputFile2)
+
+  View = e.GetView()
+  Layer1 = View.CreateLayer(Raster1)
+  Layer2 = View.CreateLayer(Raster2)
+  View.Zoom, 1, /FULL_EXTENT
+
+  ;快速大气校正
+  ;  QUACRaster1 = ENVIQUACRASTER(Raster1)
+  ;  QUACRaster2 = ENVIQUACRASTER(Raster2)
+
+  ;计算NDVI
+  Index = 'NDVI'
+  Subset1 = ENVISpectralIndexRaster(Raster1, Index)
+  Subset2 = ENVISpectralIndexRaster(Raster2, Index)
+
+  ;初始化波段差值Task
+  ImageBandDiffTask = ENVITASK('ImageBandDifference')
+  ;定义输入参数，并执行
+  ImageBandDiffTask.INPUT_RASTER1 = Subset1
+  ImageBandDiffTask.INPUT_RASTER2 = Subset2
+  ImageBandDiffTask.EXECUTE
+
+  ;初始化自动阈值分割Task
+  AutoChangeThreshTask = ENVITASK('AutoChangeThresholdClassification')
+  ;定义输入参数，默认为OTSU算法
+  AutoChangeThreshTask.INPUT_RASTER = ImageBandDiffTask.OUTPUT_RASTER
+  ;执行Task
+  AutoChangeThreshTask.EXECUTE
+
+  ;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  ;定义输入参数，并执行
+  SmoothTask.INPUT_RASTER = AutoChangeThreshTask.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = 3
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  ;定义输入参数
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.MINIMUM_SIZE = 10
+  AggregationTask.OUTPUT_RASTER_URI = outputFile
+
+  ;执行Task，输出变化检测栅格结果
+  AggregationTask.EXECUTE
+
+  ;加载变化检测栅格结果
+  Layer3 = View.CreateLayer(AggregationTask.OUTPUT_RASTER)
+
+  ClassStatistics_and_Barplot, AggregationTask.OUTPUT_RASTER, [3,2]
+
+  ;输出矢量结果
+  dotPos = STRPOS(outputFile, '.', /REVERSE_SEARCH)
+  outVectorFile = dotPos NE -1 ? STRMID(outputFile, 0, dotPos)+'.shp' : outputFile+'.shp'
+  ;初始化Task，栅格转矢量
+  ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+  ;设置输入参数
+  ClassToVectorTask.INPUT_RASTER = AggregationTask.OUTPUT_RASTER
+  ClassToVectorTask.EXPORT_CLASSES = ['Big Increase','Big Decrease']
+  ClassToVectorTask.OUTPUT_VECTOR_URI = outVectorFile
+
+  ClassToVectorTask.EXECUTE
+
+  ;加载变化检测矢量结果
+  Layer4 = View.CreateLayer(ClassToVectorTask.OUTPUT_VECTOR)
+END

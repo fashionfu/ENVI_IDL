@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="isRegEx" value="false"/>
+		<item key="selection" value="POT-5"/>
+		<item key="casesensitive" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="wrap" value="true"/>
+		<item key="wholeword" value="false"/>
+		<list key="findhistory">
+			<item value="POT-5"/>
+			<item value="KEYWORD_SET"/>
+			<item value="ECOVegetationIndex"/>
+			<item value="export_vector"/>
+			<item value="export_shapefile"/>
+			<item value="DTH_ThematicProducts_Sentinel2"/>
+			<item value="New Rainbow"/>
+		</list>
+		<list key="replacehistory">
+			<item value="ISA"/>
+			<item value="GSF_NDVITask"/>
+			<item value="export_vector"/>
+			<item value="GSF_MODIS_WATER"/>
+			<item value="Rainbow"/>
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_WIDTH" value="421"/>
+		<item key="DIALOG_FONT_NAME" value="1|Microsoft YaHei UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Microsoft YaHei UI"/>
+		<item key="DIALOG_HEIGHT" value="527"/>
+		<item key="DIALOG_X_ORIGIN" value="843"/>
+		<item key="DIALOG_Y_ORIGIN" value="262"/>
+	</section>
+</section>

@@ -1,0 +1,26 @@
+{
+  "name":"ENVIRaster2URIs",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_ENVIRaster2URIs",
+  "display_name":"ENVIRaster2URIs",
+  "description":"ENVIRaster2URIs.",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_raster",
+      "display_name":"Input Raster",
+      "type":"ENVIRasterArray",
+      "dimensions":"[*]",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output_file",
+      "display_name":"Output File",
+      "type":"ENVIURIArray",
+      "dimensions":"[*]",
+      "direction":"output",
+      "required":true
+    }
+  ]
+}

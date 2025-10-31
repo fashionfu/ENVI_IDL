@@ -1,0 +1,17 @@
+COMPILE_OPT IDL2
+e = ENVI(/CURRENT)
+
+;当自定义 ENVITask 未部署到 ENVI 路径时，可以使用 task 文件完整路径进行初始化
+taskfile = FILEPATH('VFCTask.task', root_dir=ROUTINE_DIR())
+Task = ENVITask(taskfile)
+Result = e.UI.SelectTaskParameters(Task)
+;
+IF Result NE 'OK' THEN return
+
+Task.Execute
+
+;显示结果
+e.Data.Add, Task.OUTPUT_RASTER
+view = e.GetView()
+layer = view.CreateLayer(Task.OUTPUT_RASTER)
+END

@@ -1,0 +1,62 @@
+{
+  "name":"GSF_WaterExtractTask",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_WaterExtractTask",
+  "display_name":"GSF_WaterExtractTask",
+  "description":"Use this template as a reference when building tasks for a new procedure.",
+  "schema":"envitask_3.2",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "display_name":"Input Raster",
+      "type":"ENVIRASTER",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"water_index",
+      "display_name":"Water Index",
+      "type":"String",
+      "direction":"input",
+      "required":false,
+      "default":"NDWI",
+      "choice_list":["NDWI","MNDWI"]
+    },
+    {
+      "name":"threshold",
+      "display_name":"Threshold",
+      "type":"double",
+      "direction":"input",
+      "required":false,
+      "default":0.0
+    },
+    {
+      "name":"auto_threshold",
+      "display_name":"Auto Threshold",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "display_name":"Output Raster",
+      "type":"ENVIRASTER",
+      "direction":"output",
+      "required":true,
+      "uri_param":"OUTPUT_URI",
+      "description":"This is a reference to the output raster."
+    },
+    {
+      "name":"OUTPUT_URI",
+      "display_name":"Output Raster URI",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":false,
+      "description":"Specify a string with the fully-qualified path and filename for OUTPUT_RASTER.",
+      "fold_case":true,
+      "auto_extension":".dat",
+      "is_temporary":true
+    }
+  ]
+}

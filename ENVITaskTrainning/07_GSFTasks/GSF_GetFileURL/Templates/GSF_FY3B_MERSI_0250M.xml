@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3B_MERSI_0250M">
+    <RASTER interleave="bsq">
+      <DATASET>//EV_250_RefSB_b1</DATASET>
+      <DATASET>//EV_250_RefSB_b2</DATASET>
+      <DATASET>//EV_250_RefSB_b3</DATASET>
+      <DATASET>//EV_250_RefSB_b4</DATASET>
+      <XGRID>//Longitude</XGRID>
+      <YGRID>//Latitude</YGRID>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+	  <METADATA name="VIR_Cal_Coeff" id="//VIR_Cal_Coeff"/>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>//EV_250_Emissive</DATASET>
+      <XGRID>//Longitude</XGRID>
+      <YGRID>//Latitude</YGRID>
+      <METADATA name="Slope" id="//EV_250_Emissive/Slope"/>
+      <METADATA name="Intercept" id="//EV_250_Emissive/Intercept"/>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

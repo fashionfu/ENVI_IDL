@@ -1,0 +1,47 @@
+{
+  "name":"GSF_Get_Output_Filename",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_Get_Output_Filename",
+  "display_name":"Get Output Filename",
+  "description":"Get Output Filename",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_file",
+      "display_name":"Input File",
+      "type":"string",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"file_extension",
+      "display_name":"File Extension",
+      "type":"string",
+      "direction":"input",
+      "required":true
+    },
+    {
+      "name":"output_path",
+      "display_name":"Output Path",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":false,
+      "is_directory":true
+    },
+    {
+      "name":"delete_exist",
+      "display_name":"Delete Exist File",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"output_file",
+      "display_name":"Output File",
+      "type":"ENVIURI",
+      "direction":"output",
+      "required":true
+    }
+  ]
+}

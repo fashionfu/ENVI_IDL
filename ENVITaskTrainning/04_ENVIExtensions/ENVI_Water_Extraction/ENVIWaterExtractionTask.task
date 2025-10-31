@@ -1,0 +1,69 @@
+{
+  "name":"WaterExtraction",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"ENVIWaterExtractionTask",
+  "displayName":"Water Extraction",
+  "description":"This task performs water extraction via MNDWI.",
+  "parameters":[
+    {
+      "name":"Input_Raster",
+      "displayName":"Input Raster",
+      "dataType":"ENVIRaster",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the input raster."
+    },
+    {
+      "name":"Apply_QUAC",
+      "displayName":"Apply QUAC",
+      "dataType":"bool",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the input raster.",
+      "defaultValue":0
+    },    
+    {
+      "name":"thresholdValue",
+      "displayName":"Threshold Value",
+      "dataType":"double",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the threshold value.",
+      "defaultValue":0.01
+    },
+    {
+      "name":"smoothSize",
+      "displayName":"Smooth Size",
+      "dataType":"uint",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the smooth size.",
+      "defaultValue":5
+    },
+    {
+      "name":"minArea",
+      "displayName":"Minimum Area (km2)",
+      "dataType":"double",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the smooth size.",
+      "defaultValue":0.05
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "displayName":"Output Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    },
+    {
+      "name":"OUTPUT_VECTOR",
+      "displayName":"Output Vector",
+      "dataType":"ENVIVector",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"This is a reference to the output vector."
+    }
+  ]
+}

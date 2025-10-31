@@ -1,0 +1,63 @@
+PRO SaveTask, pro_file,   $ ;输入pro文件完整路径
+  same_dir=same_dir,      $ ;设置此关键字，则发布到与pro文件同目录下
+  copy_pro=copy_pro,      $ ;设置此关键字，则同时拷贝pro源码文件
+  no_copy_pro=no_copy_pro   ;此关键字不再起作用，默认不拷贝pro文件
+
+  COMPILE_OPT idl2
+
+  ;编译pro文件
+  pro_name = FILE_BASENAME(pro_file, '.pro')
+  RESOLVE_ROUTINE, pro_name, /compile_full_file
+
+  OPENR, lun, pro_file, /get_lun
+  nlines = FILE_LINES(pro_file)
+  data = STRARR(nlines)
+  READF, lun, data
+  data = STRTRIM(data, 2)
+  FREE_LUN,lun
+  idx1 = WHERE(data.StartsWith('pro ',/fold_case))
+  idx2 = WHERE(data.StartsWith('function ',/fold_case))
+  idx = !NULL
+  IF idx1[0] NE -1 THEN idx=idx1
+  IF idx2[0] NE -1 THEN idx=[idx,idx2]
+  proname = data[idx]
+  names = !NULL
+  n = N_ELEMENTS(idx)
+  FOR i=0,n-1 DO BEGIN
+    tmpname = STRSPLIT(proname[i],', ',/extract)
+    names = [names, tmpname[1]]
+  ENDFOR
+  names = '"'+STRJOIN(names, '","')+'"'
+
+  tmps = STRSPLIT(pro_file, '\', /extract, count=count)
+
+  pro_dir = FILE_DIRNAME(pro_file)
+
+  IF ~KEYWORD_SET(same_dir) THEN BEGIN
+    gsftask_dir = FILEPATH('', root_dir=FILE_DIRNAME(!DIR), subdirectory=['custom_code'])
+    envi_custom_code_dir = FILEPATH('', root_dir=gsftask_dir, subdirectory=FILE_BASENAME(pro_dir))
+
+    search_flag = '/*.{task,style}'
+    IF KEYWORD_SET(no_copy_pro) THEN search_flag = '/*.{task,style}'
+    IF KEYWORD_SET(copy_pro)    THEN search_flag = '/*.{pro,task,style}'
+
+    IF ~FILE_TEST(envi_custom_code_dir, /directory) THEN file_mkdir, envi_custom_code_dir
+
+    ;如果有task文件，也一并拷贝过去吧
+    taskfiles = FILE_SEARCH(pro_dir, search_flag, count=taskcount)
+    IF taskcount NE 0 THEN BEGIN
+      FILE_COPY, taskfiles, envi_custom_code_dir, /allow_same, /overwrite
+    ENDIF
+  ENDIF ELSE BEGIN
+    ;如果编译到与pro同目录
+    envi_custom_code_dir = pro_dir
+  ENDELSE
+
+  basefilename = FILE_BASENAME(pro_file, '.pro', /fold_case)
+  savefile = FILEPATH(basefilename+'.sav', root_dir=envi_custom_code_dir)
+
+  savecode = "save,"+names+",filename=savefile, /routines"
+  r = EXECUTE(savecode)
+  PRINT, '服务发布成功: '+pro_name
+  PRINT, '服务发布路径: '+envi_custom_code_dir
+END

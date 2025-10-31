@@ -1,0 +1,17 @@
+CHROMACODING_VALUES=true
+IDLDT_IDLDOC_FILE_TEMPLATE=\  ;+\r\n  ; \:Author\: ${user}\r\n  ;-
+IDLDT_IDLDOC_ROUTINE_TEMPLATE=\  ;+\r\n  ; \:Description\:\r\n  ;    Describe the procedure.\r\n  ;\r\n  ; ${parameters}\r\n  ;\r\n  ; ${keywords}\r\n  ;\r\n  ; \:Author\: ${user}\r\n  ;-
+IDLDT_KEYWORD_FORMATTING=2
+IDLDT_RESERVED_WORD_FORMATTING=1
+IDLDT_VALUES=true
+IDL_DEVICE=WIN
+IDL_GR_TILECACHESIZE=0
+IDL_PATH_CACHE_DISABLE=0
+IDL_QUIET=0
+IDL_VALUES=true
+MACROS_FLOATING_TOOLBAR_HEIGHT=61
+MACROS_FLOATING_TOOLBAR_WIDTH=177
+MACROS_FLOATING_TOOLBAR_X=104
+MACROS_FLOATING_TOOLBAR_Y=104
+coolItemsOrder=org.eclipse.ui.workbench.file\:com.rsi.idldt.ui.textedit.toolbar\:com.rsi.idldt.ui.toolbar.debugTools
+eclipse.preferences.version=1

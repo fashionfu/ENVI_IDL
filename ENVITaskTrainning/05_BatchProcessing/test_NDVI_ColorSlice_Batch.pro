@@ -1,0 +1,61 @@
+PRO test_NDVI_ColorSlice_Batch
+  COMPILE_OPT idl2
+  e=envi()
+  ;获取程序路径（IDL8.7新增一个routine_dir函数可以直接获取）
+  indir = FILE_DIRNAME(ROUTINE_FILEPATH())+PATH_SEP()+'data'+PATH_SEP()
+  ;弹出对话框选择多个文件
+  files = ENVI_PICKFILE(title='请选择多个文件进行批处理', $
+    default=indir, /multiple_files, filter=['*.hdr','*.tif'])
+  IF files[0] EQ '' THEN RETURN
+
+  ;设置输出路径
+  outdir = ENVI_PICKFILE(/output, /directory, title='请选择输出路径')
+  IF outdir EQ '' THEN RETURN
+
+  DataColl = e.DATA  ;Data Manager
+  View = e.GetView()
+  
+  errMsgs = !NULL    ;记录错误消息
+  n_files = N_ELEMENTS(files)
+  FOR i=0, n_files-1 DO BEGIN
+    file = files[i]
+    ;错误处理
+    Catch, errorStatus
+    IF (errorStatus NE 0) THEN BEGIN
+      Catch, /CANCEL
+      errMsgs = [errMsgs, file +' --- '+ !ERROR_STATE.MSG]
+      MESSAGE, /RESET
+      CONTINUE
+    ENDIF
+    ;
+    raster = e.OpenRaster(files[i])
+    ndvi = ENVISpectralIndexRaster(raster, 'NDVI')
+    ndvi = ENVIPixelwiseBandMathRaster(ndvi,'b1>(-1)<1')
+
+    ;根据输入文件名，自动设定输出文件名
+    basename = FILE_BASENAME(file,STRMID(file,STRPOS(file,'.',/reverse_search)))
+    outfile = FILEPATH(basename+'_ndvi_class.dat', root_dir=outdir)
+    File_Delete_Enhanced, outfile ;删除已存在文件
+    ;密度分割
+    Task = ENVITask('ColorSliceClassification')
+    Task.INPUT_RASTER = ndvi
+    Task.COLOR_TABLE_NAME = 'CB-Greens'
+    Task.DATA_MINIMUM = 0.0
+    Task.DATA_MAXIMUM = 1.0
+    Task.NUMBER_OF_RANGES = 5
+    Task.OUTPUT_RASTER_URI = outfile
+    Task.Execute
+
+    ;将结果添加到Data Manager中，并显示
+    DataColl.Add, Task.OUTPUT_RASTER
+    Layer = View.CreateLayer(Task.OUTPUT_RASTER)
+  ENDFOR
+
+  ;显示出错文件及对应的报错信息
+  IF errMsgs NE !NULL THEN BEGIN
+    logFile = e.GetTemporaryFilename('log', /cleanup_on_exit)
+    XDISPLAYFILE, logFile, group=e.WIDGET_ID, title='错误消息', $
+      text=['Input File --- Error Message', errMsgs], /grow_to_screen, $
+      done_button='Exit', height=20, width=120, /modal
+  ENDIF
+END

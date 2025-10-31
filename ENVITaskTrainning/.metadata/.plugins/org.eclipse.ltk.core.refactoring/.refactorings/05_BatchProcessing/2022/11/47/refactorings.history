@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“05_BatchProcessing/test_SoftmaxClassifier_Batch.pro”重命名为“test_RandomForest_Batch.pro”" description="重命名资源“test_SoftmaxClassifier_Batch.pro”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="test_SoftmaxClassifier_Batch.pro" name="test_RandomForest_Batch.pro" stamp="1668567533541" updateReferences="true"/>
+</session>

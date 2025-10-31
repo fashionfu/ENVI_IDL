@@ -1,0 +1,6 @@
+PRO test_IDLffShape
+
+file = 'C:\Works\ENVITaskTrainning\06_ENVIAppStore\data\maskshp\mask.shp'
+oshp = OBJ_NEW('IDLffShape', file)
+
+END

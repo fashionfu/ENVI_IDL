@@ -1,0 +1,21 @@
+ENVI
+description = {
+  IKONOS data courtesy of GeoEye.}
+samples = 1000
+lines   = 1000
+bands   = 4
+header offset = 0
+file type = ENVI Standard
+data type = 12
+interleave = bsq
+sensor type = IKONOS
+byte order = 0
+map info = {UTM, 1.000, 1.000, 475006.385, 4429066.064, 4.0000000000e+000, 4.0000000000e+000, 13, North, WGS-84, units=Meters}
+coordinate system string = {PROJCS["UTM_Zone_13N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-105.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]}
+wavelength units = Micrometers
+band names = {
+ B, G, R, IR}
+wavelength = {
+ 0.480000, 0.550000, 0.665000, 0.805000}
+fwhm = {
+ 0.071000, 0.089000, 0.066000, 0.096000}

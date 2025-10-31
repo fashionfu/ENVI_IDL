@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将“test_ndvi_class.pro”移至“ndvi_class”" description="将“test_ndvi_class.pro”移至“ndvi_class”" destination="/ndvi_class" element1="/ENVIProject/test_ndvi_class.pro" element2="/ENVIProject/test_ndvi_class.task" flags="7" id="org.eclipse.ltk.core.refactoring.move.resources" resources="2" stamp="1524215137863" updateReferences="true"/>
+</session>

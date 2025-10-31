@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“02_ENVITasks/test_veg_extraction.pro”重命名为“test_Veg_Extraction.pro”" description="重命名资源“test_veg_extraction.pro”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="test_veg_extraction.pro" name="test_Veg_Extraction.pro" stamp="1524153352885" updateReferences="true"/>
+</session>

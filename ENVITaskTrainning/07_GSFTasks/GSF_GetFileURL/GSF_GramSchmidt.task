@@ -1,0 +1,76 @@
+{
+  "name":"GSF_GramSchmidt",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"GSF_GramSchmidt",
+  "displayName":"GSF_GramSchmidt",
+  "version":"5.3",
+  "description":"This task performs Gram-Schmidt Pan Sharpening Classic",
+  "parameters":[
+    {
+      "name":"INPUT_LOW_RESOLUTION_RASTER",
+      "keyword":"INPUT_LOW_RESOLUTION_RASTER",
+      "displayName":"Input Low Resolution Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify a low-resolution raster."
+    },
+    {
+      "name":"INPUT_HIGH_RESOLUTION_RASTER",
+      "keyword":"INPUT_HIGH_RESOLUTION_RASTER",
+      "displayName":"Input High Resolution Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify a high-resolution panchromatic raster."
+    },
+    {
+      "name":"input_mask_vector",
+      "keyword":"input_mask_vector",
+      "displayName":"Input Mask Vector",
+      "dataType":"ENVIVECTOR",
+      "direction":"input",
+      "parameterType":"optional",
+      "description":"Specify a mask vector."
+    },
+    {
+      "name":"inverse_mask",
+      "displayName":"Inverse Mask",
+      "dataType":"BOOL",
+      "direction":"input",
+      "parameterType":"optional",
+      "defaultValue":"false",
+      "description":"Inverse Mask or not."
+    },
+    {
+      "name":"data_ignore_value",
+      "displayName":"Data Ignore Value",
+      "dataType":"double",
+      "direction":"input",
+      "parameterType":"optional",
+      "description":"Background Value."
+    },
+    {
+      "name":"resampling",
+      "displayName":"Resampling",
+      "dataType":"string",
+      "choiceList":{
+        "Nearest Neighbor":0,
+        "Bilinear":1,
+        "Cubic Convolution":2
+      },
+      "direction":"input",
+      "parameterType":"required",
+      "defaultValue":"Bilinear",
+      "description":"Specify the Resample Method."
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "displayName":"Output Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"Specify the output file path."
+    }
+  ]
+}

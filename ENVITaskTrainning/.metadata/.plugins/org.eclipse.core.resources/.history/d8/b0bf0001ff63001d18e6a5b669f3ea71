@@ -1,0 +1,106 @@
+PRO GSF_NDVITask,                $ ;植被指数计算
+  input_file    = input_file,    $ ;必选。字符串。多光谱图像。包含波长信息，包含计算对应指数的波段。
+  roi_coords    = roi_coords,    $ ;可选。字符串。空间范围。支持矢量压缩包(zip)、shp文件、地名(需联网)、坐标字符串(x1,y1,x2,y2,x3,y3...)
+  output_format = output_format, $ ;可选。字符串。输出格式。可选项为ENVI、TIFF，默认为TIFF(Web前端可根据需要设置默认值)
+  output_dir    = output_dir,    $ ;可选。字符串。输出路径。若不设置，则输出到job文件夹
+  out_options   = out_options      ;可选。JSON。返回结果
+
+  ;test code
+;  input_file='C:\IDLWorkspace\_ESE_GSF_Tasks\test_GSF_QuickMap\data\beijing_miyun.dat'
+;  output_format = 'TIFF'
+;  output_dir = 'C:\temp'
+;  cd, 'C:\temp'
+
+  COMPILE_OPT idl2
+  e=ENVI(/headless)
+
+  ;捕捉错误
+  Catch, errorStatus
+  IF (errorStatus NE 0) THEN BEGIN
+    Catch, /CANCEL
+    error_msg = !ERROR_STATE.msg
+    GSF_CloseRasters, need_to_close
+    GSF_FileDelete, need_to_delete, /delete_tempfiles, out_options=out_options
+    MESSAGE, error_msg, /noname
+  ENDIF
+
+  ;如果输出路径没有设置，则默认输出到job文件夹
+  CD, current=curdir
+  IF ~KEYWORD_SET(output_dir) THEN output_dir=curdir
+
+  ;获取job_id
+  job_id = GSF_FileBaseName(curdir)
+
+  ;记录需要关闭和删除的
+  need_to_delete = LIST() & need_to_close = LIST()
+
+  ;将jobid、product_type传回
+  out_options = ORDEREDHASH('job_id', job_id)
+
+  ;默认输出ENVI格式
+  IF ~KEYWORD_SET(output_format) THEN output_format='ENVI'
+  output_format = STRUPCASE(output_format)
+  CASE output_format OF
+    'ENVI': ext='.dat'
+    'TIFF': ext='.tif'
+  ENDCASE
+
+  ;获取文件名（不含后缀）
+  fbasename = GSF_FileBaseName(input_file)
+
+  ;任务进度
+  gsf_progress = OBJ_NEW('GSF_Progress_Message',)
+  gsf_progress.SetProgress, percent=10, message='Executing'
+
+  ;打开栅格
+  raster = (e.OpenRaster(input_file))[0] ;获取第一个栅格，可以支持Landsat等MTL.txt数据
+
+  ;开始计算NDVI
+  gsf_progress.SetProgress, percent=50, message='Calculating'
+
+  ;设置输出文件
+  output_file = FILEPATH(fbasename+'_NDVI'+ext, root_dir=output_dir)
+  GSF_FileDelete, output_file
+
+  ;计算NDVI，并输出
+  output_raster = ENVISpectralIndexRaster(raster, 'NDVI')
+  output_raster.Export, output_file, output_format
+  output_raster.Close
+  output_raster = e.OpenRaster(output_file)
+
+  ;开始获取快视图
+  gsf_progress.SetProgress, percent=70, message='Generating QuickView'
+  ;获取快视图和坐标信息
+  GSF_GetFileURL, input_raster=output_raster, /get_pngfile_url, valid_data_range=[0,1], $
+    color_table_name='CB-Greens', /get_new_extent, out_options=tmp_options
+
+  ;将需要返回的信息存放在out_options中
+  out_options += ORDEREDHASH('outfile_url', output_file, $
+    'quickview_url', tmp_options['PngFileURL'], 'map_extent', tmp_options['MapExtent'])
+
+  ;用于制图
+  pngfile = tmp_options['LocalPngFileURL']
+  map_extent = tmp_options['MapExtent']
+
+  ;开始自动制图
+  gsf_progress.SetProgress, percent=90, message='Generating QuickMap'
+
+  md = raster.Metadata
+  IF md.HasTag('sensor type') THEN satellite_sensor='数据来源：'+md['sensor type']
+
+  ;制图
+  stats_ranges  = ['<0.0','0.0~0.2','0.2~0.4','0.4~0.6','0.6~0.8','>0.8']
+  stats_bins = [-1e9,0.0,0.2,0.4,0.6,0.8,1e9]
+  stats_areas = GSF_StatsAreas(output_raster, stats_bins=stats_bins)
+  title = '归一化植被指数专题图'
+  author = '制图单位：易智瑞信息技术有限公司'
+  quickmap_file = GSF_FileBasename(output_file)+'_quickmap.png'
+  GSF_QuickMap, pngfile, map_extent=map_extent, /add_legend, range=[0,1], $
+    stats_areas=stats_areas, stats_ranges=stats_ranges, acquisition_time=acquisition_time,  $
+    acquisition_style=1, satellite_sensor=satellite_sensor, title=title, $
+    author=author, output_file=quickmap_file
+  out_options += ORDEREDHASH('quickmap_url', quickmap_file)
+  
+  print, out_options, /implied_print
+  gsf_progress.Finish
+END

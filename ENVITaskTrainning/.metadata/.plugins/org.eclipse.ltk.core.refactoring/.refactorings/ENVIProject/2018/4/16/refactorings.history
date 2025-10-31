@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="将资源“ENVIProject/ENVITaskTemplate.task”重命名为“test_ndvi_class.task”" description="重命名资源“ENVITaskTemplate.task”" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="ENVITaskTemplate.task" name="test_ndvi_class.task" stamp="1524214615222" updateReferences="true"/>
+</session>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3B_VIRR">
+    <RASTER interleave="bsq">
+      <DATASET>//EV_RefSB</DATASET>
+      <XGRID>//Longitude</XGRID>
+      <YGRID>//Latitude</YGRID>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+  	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="RefSB_Cal_Coefficients" id="//RefSB_Cal_Coefficients"/>
+	  <METADATA name="Prelaunch_Nonlinear_Coefficients" id="//Prelaunch_Nonlinear_Coefficients"/>
+	  <METADATA name="Emissive_Centroid_Wave_Number" id="//Emmisive_Centroid_Wave_Number"/>
+	  <METADATA name="Emissive_BT_Coefficients" id="//Emmisive_BT_Coefficients"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>//EV_Emissive</DATASET>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+  	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="RefSB_Cal_Coefficients" id="//RefSB_Cal_Coefficients"/>
+	  <METADATA name="Prelaunch_Nonlinear_Coefficients" id="//Prelaunch_Nonlinear_Coefficients"/>
+	  <METADATA name="Emissive_Centroid_Wave_Number" id="//Emmisive_Centroid_Wave_Number"/>
+	  <METADATA name="Emissive_BT_Coefficients" id="//Emmisive_BT_Coefficients"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+    </RASTER>
+    <RASTER>
+      <DATASET>//Emissive_Radiance_Scales</DATASET>
+    </RASTER>
+    <RASTER>
+      <DATASET>//Emissive_Radiance_Offsets</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

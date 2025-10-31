@@ -1,0 +1,12 @@
+{
+
+   "schema": "envitask_3.2",
+   "show_preview": false,
+   "show_display_result": true,
+   "parameters": [
+    {
+       "name": "COLOR_TABLE_NAME",
+       "type": "ENVIColorMapName_UI"
+    }
+   ]
+}

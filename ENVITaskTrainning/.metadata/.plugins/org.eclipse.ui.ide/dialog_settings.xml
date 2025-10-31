@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<list key="installedFeatures">
+		<item value="com.perforce.team.feature:2021.2.2264919"/>
+		<item value="com.perforce.team.folder.feature:2021.2.2264919"/>
+		<item value="com.perforce.team.search.feature:2021.2.2264919"/>
+		<item value="com.rsi.idldt.feature:5.0.10"/>
+		<item value="org.eclipse.cvs:1.4.1800.v20210611-1600"/>
+		<item value="org.eclipse.egit:5.12.0.202106070339-r"/>
+		<item value="org.eclipse.emf.common:2.25.0.v20220123-0838"/>
+		<item value="org.eclipse.emf.ecore:2.27.0.v20220123-0838"/>
+		<item value="org.eclipse.help:2.3.600.v20210611-1600"/>
+		<item value="org.eclipse.jgit.gpg.bc:5.12.0.202106070339-r"/>
+		<item value="org.eclipse.jgit.http.apache:5.12.0.202106070339-r"/>
+		<item value="org.eclipse.jgit.ssh.apache:5.12.0.202106070339-r"/>
+		<item value="org.eclipse.jgit:5.12.0.202106070339-r"/>
+		<item value="org.eclipse.platform:4.20.0.v20210611-1600"/>
+		<item value="org.eclipse.rcp:4.20.0.v20210611-1600"/>
+		<item value="org.eclipse.team.svn:4.0.5.I20170425-1700"/>
+	</list>
+	<section name="WORKBENCH_SETTINGS">
+		<list key="ENABLED_TRANSFERS">
+		</list>
+	</section>
+	<section name="ChooseWorkspaceDialogSettings">
+		<item key="DIALOG_X_ORIGIN" value="194"/>
+		<item key="DIALOG_Y_ORIGIN" value="172"/>
+	</section>
+	<section name="NewIdlProjectWizard">
+		<section name="NewIdlProjectWizardPage">
+			<item key="add_to_path" value="true"/>
+		</section>
+	</section>
+	<section name="NewENVIExtensionWizard">
+		<section name="NewENVIExtensionWizardPage">
+			<item key="ENVIExtension_SaveFilePath" value="D:\ENVITaskTrainning"/>
+		</section>
+	</section>
+	<section name="RecentWorkingDirectories">
+		<list key="RecentWorkingDirsList">
+			<item value="C:\Users\duhuijian"/>
+			<item value="C:\Users\DUHUIJ~1\AppData\Local\Temp"/>
+			<item value="C:\Program Files\Harris\ENVI56"/>
+			<item value="C:\Program Files\Harris\ENVI56\IDL88"/>
+			<item value="C:\Program Files\Harris\ENVI56\classic\spec_lib"/>
+			<item value="C:\Program Files\Harris\ENVI56\classic\data"/>
+			<item value="C:\Program Files\Harris\ENVI56\classic\save_add"/>
+			<item value="C:\Temp"/>
+			<item value="C:\temp"/>
+			<item value="C:\ENVITest"/>
+		</list>
+	</section>
+</section>

@@ -1,0 +1,176 @@
+;本程序需要 ENVI 5.6.3 版本，并且安装了 ENVI Deep Learning 2.0
+PRO test_RandomForest_Batch
+  COMPILE_OPT IDL2
+  e = ENVI()
+
+  IF e.VERSION LT '5.6.3' THEN BEGIN
+    PRINT, 'Warning: 本程序需要 ENVI 5.6.3 版本，并且安装了 ENVI Deep Learning 2.0'
+    RETURN
+  ENDIF
+  
+  ;获取路径
+  data_dir = FILEPATH('data', root_dir=ROUTINE_DIR())
+  
+  ;打开图像
+  file = FILEPATH('LasVegasMay2010.dat', root_dir=data_dir)
+  raster = e.OpenRaster(file)
+  
+  ;打开样本
+  roifile = FILEPATH('LasVegasMay2010_rois.xml', root_dir=data_dir)
+  rois = e.OpenROI(roifile)
+  
+  ;统计栅格
+  StatsTask = ENVITask('NormalizationStatistics')
+  StatsTask.INPUT_RASTERS = raster
+  StatsTask.Execute
+  
+  ;获取训练数据
+  DataPrepTask = ENVITask('MLTrainingDataFromROIs')
+
+
+
+  ; Define inputs
+
+  DataPrepTask.INPUT_RASTER = Raster
+
+  DataPrepTask.INPUT_ROI = ROI
+
+  DataPrepTask.BACKGROUND_LABELS = ['Disturbed Earth', 'Water']
+
+  DataPrepTask.NORMALIZE_MIN_MAX = StatsTask.Normalization
+
+  DataPrepTask.Execute
+
+
+
+  ; Get the training task from the catalog of ENVITasks
+
+  TrainTask = ENVITask('TrainRandomForest')
+
+
+
+  ; Define inputs
+
+  TrainTask.INPUT_RASTER = DataPrepTask.OUTPUT_RASTER
+
+  TrainTask.NUM_ESTIMATORS = 100
+
+
+
+  ; Run the task
+
+  TrainTask.Execute
+
+
+
+  ; Output model metadata
+
+  outputModelUri = TrainTask.OUTPUT_MODEL_URI
+
+  print, 'Model URI: ' + outputModelUri
+
+  ;打开所有栅格
+  files = FILE_SEARCH(data_dir, '*.hdr', count=count)
+  rasters = !null
+  FOREACH element, files DO rasters = [rasters, e.OpenRaster(element)]
+
+
+
+  outputModel = TrainTask.OUTPUT_MODEL
+
+  indir = FILE_DIRNAME(ROUTINE_FILEPATH())+PATH_SEP()+'data'+PATH_SEP()
+  files = FILE_SEARCH(indir, '*.dat', count=count)
+  IF count EQ 0 THEN RETURN
+
+  outdir = FILE_DIRNAME(ROUTINE_FILEPATH())+PATH_SEP()+'output'
+
+  ;分类器文件
+  classifier_file = FILEPATH('SoftmaxClassifier.epo', root_dir=indir)
+  ;导入之前保存的gain和offset变量
+  jsonFile = classifier_file.Replace('.epo','.json',/fold_case)
+  json = JSON_PARSE(jsonFile)
+  gain = (json['gain']).ToArray()
+  offset = (json['offset']).ToArray()
+  class_lookup = (json['class_lookup']).ToArray(/TRANSPOSE)
+
+  ;获取训练好的分类器路径，并将其加载进来
+  trainedClassifier = ENVIRestoreObject(classifier_file)
+
+  View = e.GetView()
+  ;进度条
+  Channel = e.GetBroadcastChannel()
+  Abort = ENVIAbortable()
+  Start = ENVIStartMessage('Apply Softmax Classifier', Abort)
+  Channel.Broadcast, Start
+
+  errMsgs = !NULL ;错误消息
+
+  FOR i=0,count-1 DO BEGIN
+
+    ;输入栅格，获取文件名
+    file = files[i]
+
+    ;错误处理，如果出现错误，记录错误文件和错误信息，继续下一个处理
+    CATCH, errorStatus
+    IF (errorStatus NE 0) THEN BEGIN
+      CATCH, /CANCEL
+      errMsgs = [errMsgs, file +' --- '+ !ERROR_STATE.MSG]
+      MESSAGE, /RESET
+
+      ;进度条完成，再弹出
+      Finish = ENVIFINISHMESSAGE(Abort)
+      Channel.Broadcast, Finish
+      Channel = e.GetBroadcastChannel()
+      Abort = ENVIABORTABLE()
+      Start = ENVISTARTMESSAGE('Apply Softmax Classifier', Abort)
+      Channel.Broadcast, Start
+
+      CONTINUE
+    ENDIF
+
+    raster = e.OpenRaster(file)
+
+    ;进度条信息
+    percentProgress = ROUND((i+1)* 100.0/count)
+    infostr = 'Applying Softmax Classifier to Rasters...... (' + $
+      STRTRIM(i+1,2)+'/'+STRTRIM(count,2)+')'
+    Progress = ENVIPROGRESSMESSAGE(infostr, percentProgress, Abort)
+    Channel.Broadcast, Progress
+    IF (Abort.ABORT_REQUESTED) THEN BREAK
+
+    ;获取输入文件名
+    basename = FILE_BASENAME(file,STRMID(file,STRPOS(file,'.',/reverse_search)))
+    ;生成输出文件名
+    output_classRaster_uri = FILEPATH(basename+'_class.dat', $
+      root_dir=outdir)
+
+    ;对栅格数据进行归一化处理
+    normalizedRaster = ENVIGainOffsetRaster(raster, gain, offset)
+
+    ;利用此分类器对新的数据进行分类
+    File_Delete_Enhanced, output_classRaster_uri
+    classRaster = ENVIClassifyRaster(normalizedRaster, $
+      trainedClassifier, output_filename = output_classRaster_uri)
+
+    ;更新颜色/忽略值
+    classRaster.METADATA.UpdateItem, 'CLASS LOOKUP', class_lookup
+    IF classRaster.METADATA.HasTag('data ignore value') THEN  $
+      classRaster.METADATA.UpdateItem, 'data ignore value', 0 $
+    ELSE classRaster.METADATA.AddItem, 'data ignore value', 0
+    classRaster.WriteMetadata
+
+    Layer = View.CreateLayer(classRaster)
+  ENDFOR
+
+  ;进度条完成
+  Finish = ENVIFINISHMESSAGE(Abort)
+  Channel.Broadcast, Finish
+
+  ;显示出错文件及对应的报错信息
+  IF errMsgs NE !NULL THEN BEGIN
+    base = WIDGET_AUTO_BASE(title='ENVI Error Report')
+    ws = WIDGET_SLABEL(base, prompt=['Input Filename ---- Error Message', $
+      errMsgs], XSIZE=100, YSIZE=20)
+    WIDGET_CONTROL, base, /realize
+  ENDIF
+END

@@ -1,0 +1,35 @@
+{
+  "name":"test_Build_Footprint_ENVITask",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"test_Build_Footprint_ENVITask",
+  "displayName":"Build Raster Footprint",
+  "version":"5.3",
+  "description":"This is an example of a custom task that performs band math on two rasters.",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "displayName":"Input Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the first raster on which to perform band math. This raster is used to determine data type on output."
+    },
+    {
+      "name":"Background_Value",
+      "displayName":"Background Value",
+      "dataType":"double",
+      "direction":"input",
+      "defaultValue":0,
+      "parameterType":"optional",
+      "description":"Specify a second raster on which to perform band math."
+    },
+    {
+      "name":"OUTPUT_Vector",
+      "displayName":"Output Vector",
+      "dataType":"ENVIVector",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    }
+  ]
+}

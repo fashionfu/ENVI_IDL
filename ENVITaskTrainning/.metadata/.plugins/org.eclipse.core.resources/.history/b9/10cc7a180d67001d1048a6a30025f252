@@ -1,0 +1,25 @@
+COMPILE_OPT IDL2
+e = ENVI(/CURRENT)
+
+;打开栅格图像
+file = FILEPATH('qb_boulder_msi', $
+  root_dir=e.root_dir, subdirectory=['data'])
+raster = e.OpenRaster(file)
+
+;当自定义 ENVITask 未部署到 ENVI 路径时，可以使用 task 文件完整路径进行初始化
+taskfile = FILEPATH('VFCTask.task', root_dir=ROUTINE_DIR())
+Task = ENVITask(taskfile)
+
+;设置参数
+Task.INPUT_RASTER = raster
+Task.MINIMUM_NDVI = 0.1
+Task.MAXIMUM_NDVI = 0.7
+;Task.OUTPUT_RASTER_URI = 'C:\temp\vfc.dat'
+Task.Execute
+
+;显示结果
+e.Data.Add, Task.OUTPUT_RASTER
+view = e.GetView()
+layer = view.CreateLayer(Task.OUTPUT_RASTER)
+
+END

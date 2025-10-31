@@ -1,0 +1,71 @@
+{
+  "name":"ENVILandsat8LSTTask",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"ENVILandsat8LSTTask",
+  "display_name":"Landsat 8 LST",
+  "description":"ENVI Landsat 8 LST Task.",
+  "revision":"1.0.0",
+  "schema":"envitask_3.2",
+  "parameters":[
+    {
+      "name":"MSS_RASTER",
+      "display_name":"Input Multispectral Raster",
+      "type":"ENVIRASTER",
+      "direction":"input",
+      "required":true,
+      "description":"Specify the Multispectral Raster."
+    },
+    {
+      "name":"THE_RASTER",
+      "display_name":"Input Thermal Raster",
+      "type":"ENVIRASTER",
+      "direction":"input",
+      "required":true,
+      "description":"Specify the Thermal Raster."
+    },
+    {
+      "name":"Transmission",
+      "display_name":"Atmospheric Transmission",
+      "type":"double",
+      "direction":"input",
+      "required":true,
+      "description":"Band average atmospheric Transmission."
+    },
+    {
+      "name":"upwelling_RADIANCE",
+      "display_name":"Upwelling Radiance",
+      "type":"double",
+      "direction":"input",
+      "required":true,
+      "description":"Effective bandpass upwelling Radiance."
+    },
+    {
+      "name":"downwelling_RADIANCE",
+      "display_name":"Downwelling Radiance",
+      "type":"double",
+      "direction":"input",
+      "required":true,
+      "description":"Effective bandpass downwelling Radiance."
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "display_name":"Output LST Raster",
+      "type":"ENVIRASTER",
+      "direction":"output",
+      "required":true,
+      "uri_param":"OUTPUT_URI",
+      "description":"This is a reference to the output raster."
+    },
+    {
+      "name":"OUTPUT_URI",
+      "display_name":"Output Raster URI",
+      "type":"ENVIURI",
+      "direction":"input",
+      "required":false,
+      "description":"Specify a string with the fully-qualified path and filename for OUTPUT_RASTER.",
+      "fold_case":true,
+      "auto_extension":".dat",
+      "is_temporary":true
+    }
+  ]
+}

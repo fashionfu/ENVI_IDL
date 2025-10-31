@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_FY3D_MERSI_0250M">
+    <RASTER interleave="bsq">
+      <DATASET>/Data/EV_250_RefSB_b1</DATASET>
+      <DATASET>/Data/EV_250_RefSB_b2</DATASET>
+      <DATASET>/Data/EV_250_RefSB_b3</DATASET>
+      <DATASET>/Data/EV_250_RefSB_b4</DATASET>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="EarthSun Distance Ratio" id="//EarthSun Distance Ratio"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+      <XGRID>/Geolocation/Longitude</XGRID>
+      <YGRID>/Geolocation/Latitude</YGRID>
+    </RASTER>
+    <RASTER interleave="bsq">
+      <DATASET>/Data/EV_250_Emissive_b24</DATASET>
+      <DATASET>/Data/EV_250_Emissive_b25</DATASET>
+      <METADATA name="Slope" id="//Data//EV_250_Emissive_b24/Slope"/>
+      <METADATA name="Intercept" id="//Data//EV_250_Emissive_b24/Intercept"/>
+      <METADATA name="Data Creating Date" id="//Data Creating Date"/>
+      <METADATA name="Data Creating Time" id="//Data Creating Time"/>
+	  <METADATA name="Satellite Name" id="//Satellite Name"/>
+	  <METADATA name="Sensor Identification Code" id="//Sensor Identification Code"/>
+	  <METADATA name="Sensor Name" id="//Sensor Name"/>
+	  <METADATA name="Day Or Night Flag" id="//Day Or Night Flag"/>
+	  <METADATA name="Observing Beginning Date" id="//Observing Beginning Date"/>
+	  <METADATA name="Observing Beginning Time" id="//Observing Beginning Time"/>
+	  <METADATA name="Observing Ending Date" id="//Observing Ending Date"/>
+	  <METADATA name="Observing Ending Time" id="//Observing Ending Time"/>
+	  <METADATA name="EarthSun Distance Ratio" id="//EarthSun Distance Ratio"/>
+	  <METADATA name="Dataset Name" id="//Dataset Name"/>
+      <XGRID>/Geolocation/Longitude</XGRID>
+      <YGRID>/Geolocation/Latitude</YGRID>
+    </RASTER>
+    <RASTER>
+      <DATASET>/Calibration/VIS_Cal_Coeff</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

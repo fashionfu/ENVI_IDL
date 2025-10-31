@@ -1,0 +1,193 @@
+;+
+; :Description:
+;    变化检测模块
+;    GSF_Change_Detection
+;
+; :Information:
+;    提供波段差和特征指数差两种变化检测方法，能够获取两个时相图像上的地表变化信息。输出矢量或者栅格结果。
+;
+; :Keywords:
+;     input_file1      -- 影像数据：<文件>，第一时相数据
+;     input_file2      -- 影像数据：<文件>，第二时相数据
+;     detect_method    -- 变化检测方法：{波段差值}、{特征指数}
+;                        代码中为：BandDifference、FeatureDifference
+;                        注：默认为 波段差值
+;     band_index       -- 如果为波段差值，选择波段索引：<数字>
+;                        注：默认为0，即第1波段
+;     feature_index    -- 如果为特征指数，选择指数类型：{NDVI}、{NDWI}、{NDBI}、{Burn Index}
+;                        注：默认为NDVI
+;     smooth_size      -- 平滑窗口大小：<数字>
+;                        注：默认为5，必须为奇数
+;     aggregate_size   -- 聚类像元个数：<数字>
+;                        注：默认为100
+;     export_shapefile   -- 是否输出栅格：{Yes}、{No}
+;                        注：默认为No
+
+;     output_path      -- 输出文件完整文件名
+;     out_options-- 输出栅格文件信息
+;                        注：输出文件路径、ZIP压缩包URL、PNG图片URL、地理范围
+;
+;-
+
+
+PRO GSF_Change_Detection,            $ ;变化检测服务
+  input_file1=input_file1,           $ ;必选。字符串。前一时相数据
+  input_file2=input_file2,           $ ;必选。字符串。前一时相数据
+  detect_method=detect_method,       $ ;必选。字符串。检测方法。可选项为 BandDifference、FeatureDifference。区分大小写
+  ;                                     对应中文分别为：波段差值、特征指数。默认为波段差值
+  band_index=band_index,             $ ;可选。整型值。波段索引。默认为1，表示第1波段
+  ;                                     当 detect_method 设置为 BandDifference 时，此参数设置有效
+  feature_index=feature_index,       $ ;可选。整型值。特征指数。可选项为 NDVI、NDWI、NDBI、Burn Index，默认为 NDVI。区分大小写
+  ;                                     当 detect_method 设置为 FeatureDifference 时，此参数设置有效
+  smooth_size=smooth_size,           $ ;可选。整型值。平滑窗口大小。默认为5，必须为奇数
+  aggregate_size=aggregate_size,     $ ;可选。整型值。聚类像元个数。默认为100
+  export_shapefile=export_shapefile, $ ;可选。字符串。是否输出矢量。可选项为 Yes、No。区分大小写
+  output_path=output_path,           $ ;可选。字符串。输出路径
+  out_options=out_options
+
+  COMPILE_OPT idl2
+  e=ENVI(/HEADLESS)
+
+  ;  test code
+  ;  input_file1 = 'C:\Works\ENVITaskTrainning\02_ENVITasks\data\july_00_quac.img'
+  ;  input_file2 = 'C:\Works\ENVITaskTrainning\02_ENVITasks\data\july_06_quac.img'
+  ;  input_file1 = "D:\temp\oct_07_2002_quac_quac.dat"
+  ;  input_file2 = 'D:\temp\aug_25_2007_quac_quac.dat'
+  ;  detect_method = 'FeatureDifference'
+  ;  feature_index = 'NDVI'
+  ;  smooth_size = 3
+  ;  aggregate_size = 100
+
+  Raster1 = e.OPENRASTER(input_file1)
+  Raster2 = e.OPENRASTER(input_file2)
+
+  ;获取输出文件名
+  GSF_Get_Output_Filename, input_file=input_file1,         $
+    output_path=output_path, file_extension='_change.dat', $
+    output_file=output_file
+  FILE_DELETE, output_file, /quiet, /allow_nonexistent
+
+  smooth_size = LONG64(smooth_size)
+  aggregate_size = LONG64(aggregate_size)
+
+  ;
+  CASE detect_method OF
+    'BandDifference': BEGIN
+      ;控制波段索引，以防越界
+      band_index = UINT(band_index)-1
+      band_index = band_index>0<((Raster1.nbands<Raster2.nbands)-1)
+      ;
+      ;获取波段差值输入的栅格
+      Subset1 = ENVISubsetRaster(Raster1, Bands=band_index)
+      Subset2 = ENVISubsetRaster(Raster2, Bands=band_index)
+    END
+    'FeatureDifference': BEGIN
+      ;{NDVI}、{NDWI}、{NDBI}、{NBR}
+      ;定义变化检测输入栅格
+      Subset1 = ENVISpectralIndexRaster(Raster1, feature_index)
+      Subset2 = ENVISpectralIndexRaster(Raster2, feature_index)
+
+      ;异常值处理
+      expression = 'b1>(-1)<1'
+      Subset1 = ENVIPixelwiseBandMathRaster(Subset1, expression)
+      Subset2 = ENVIPixelwiseBandMathRaster(Subset2, expression)
+
+      ;如果为 Burn Index
+      ;Burn Index 为 NBR(Normalized Burn Ratio)的负值，所以需要互换时相1和2
+      IF feature_index EQ 'NBR' THEN BEGIN
+        tmpRaster = Subset1
+        Subset1 = Subset2
+        Subset2 = tmpRaster
+        tmpRaster = !NULL
+      ENDIF
+    END
+  ENDCASE
+
+  ;如果行列号不一样，则取重叠区
+  IF Subset1.NCOLUMNS NE Subset2.NCOLUMNS OR $
+    Subset1.NROWS NE Subset2.NROWS THEN BEGIN
+
+    Task = ENVITASK('ImageIntersection')
+    Task.INPUT_RASTER1 = Subset1
+    Task.INPUT_RASTER2 = Subset2
+    Task.Execute
+    Subset1 = Task.OUTPUT_RASTER1
+    Subset2 = Task.OUTPUT_RASTER2
+  ENDIF
+
+  ;暂时不考虑归一化
+  ;  IF detect_method EQ 'BandDifference' && Subset1.DATA_TYPE NE Subset2.DATA_TYPE THEN BEGIN
+  ;    RadNormTask = ENVITask('RadiometricNormalization')
+  ;    RadNormTask.INPUT_RASTER1=Subset1
+  ;    RadNormTask.INPUT_RASTER2=Subset2
+  ;    RadNormTask.Execute
+  ;    Subset2 = RadNormTask.OUTPUT_RASTER
+  ;    !SERVER.NOTIFY, 40, '两个时相数据归一化成功'
+  ;  ENDIF
+
+  ;初始化波段差值Task
+  ImageBandDiffTask = ENVITASK('ImageBandDifference')
+  ImageBandDiffTask.INPUT_RASTER1 = Subset1
+  ImageBandDiffTask.INPUT_RASTER2 = Subset2
+  ImageBandDiffTask.EXECUTE
+
+  ;如果标准差太小，说明差值图像不离散，使用Tsai自动阈值法
+  stats = ENVIRasterStatistics(ImageBandDiffTask.OUTPUT_RASTER)
+  IF stats.STDDEV LT 5 THEN threshold_method='Tsai' $
+  ELSE threshold_method='Otsu'
+
+  ;初始化自动阈值分割Task
+  AutoChangeThreshTask = ENVITASK('AutoChangeThresholdClassification')
+  AutoChangeThreshTask.INPUT_RASTER = ImageBandDiffTask.OUTPUT_RASTER
+  ;  AutoChangeThreshTask.THRESHOLD_METHOD = threshold_method
+  AutoChangeThreshTask.EXECUTE
+
+  ;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  SmoothTask.INPUT_RASTER = AutoChangeThreshTask.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = smooth_size
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  AggregationTask.MINIMUM_SIZE = aggregate_size
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.OUTPUT_RASTER_URI = output_file
+  AggregationTask.EXECUTE
+
+  OUTPUT_RASTER = e.OpenRaster(output_file)
+
+  ;更新类别信息，把Masked类别去掉，并修改类别名为Unclassified, Other, Big Increase, Big Decrease
+  OUTPUT_RASTER.Metadata.UpdateItem, 'classes', 4
+  OUTPUT_RASTER.Metadata.UpdateItem, 'class names', ['Unclassified', 'Other', 'Increase', 'Decrease']
+  OUTPUT_RASTER.Metadata.UpdateItem, 'class lookup',[[0,0,0],[0,0,0],[0,0,255],[255,0,0]]
+  OUTPUT_RASTER.WriteMetadata
+
+  ;获取快视图/压缩包URL/地理范围
+  GSF_GetFileURL, input_raster=OUTPUT_RASTER,            $
+    /get_pngfile_url, /get_zipfile_url, /get_map_extent, $
+    /get_legend_url, out_options=out_options
+
+  ;如果输出矢量
+  IF STRUPCASE(export_shapefile) EQ 'YES' THEN BEGIN
+
+    ;根据栅格文件名创建矢量文件名
+    GSF_Get_Output_Filename, input_file=output_file,  $
+      file_extension='.shp', output_path='same',           $
+      /delete_exist, output_file=output_shapefile
+
+    ;初始化Task，栅格转矢量
+    ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+    ClassToVectorTask.INPUT_RASTER = AggregationTask.OUTPUT_RASTER
+    ClassToVectorTask.EXPORT_CLASSES = ['Increase', 'Decrease']
+    ClassToVectorTask.OUTPUT_VECTOR_URI = output_shapefile
+    ClassToVectorTask.EXECUTE
+
+    ;获取压缩包URL
+    GSF_GetFileURL, input_vector=ClassToVectorTask.OUTPUT_VECTOR, $
+      /get_zipfile_url, out_options=shp_options
+
+    out_options += ORDEREDHASH("output_shapefile", output_shapefile, $
+      "ZipShpfileURL", shp_options['ZipFileURL'])
+  ENDIF
+END

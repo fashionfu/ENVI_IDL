@@ -1,0 +1,71 @@
+{
+  "name":"test_SavitzkyGolayFilterTask",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"test_SavitzkyGolayFilterTask",
+  "displayName":"Savitzky-Golay Filter",
+  "version":"5.3",
+  "description":"This task performs Savitzky-Golay Filter.",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "displayName":"Input Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify input rasters on which to perform HANTS."
+    },
+    {
+      "name":"Nleft",
+      "displayName":"N Left",
+      "dataType":"int",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"An integer specifying the number of data points to the left of each point to include in the filter.",
+      "defaultValue":5
+    },
+    {
+      "name":"Nright",
+      "displayName":"N Right",
+      "dataType":"int",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"An integer specifying the number of data points to the right of each point to include in the filter.",
+      "defaultValue":5
+    },
+    {
+      "name":"Order",
+      "displayName":"Order",
+      "dataType":"int",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"An integer specifying the order of the derivative desired. For smoothing, use order 0. To find the smoothed first derivative of the signal, use order 1, for the second derivative, use order 2, etc.",
+      "defaultValue":0
+    },
+    {
+      "name":"Degree",
+      "displayName":"Degree",
+      "dataType":"int",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"An integer specifying the degree of smoothing polynomial. Typical values are 2 to 4. Lower values for Degree will produce smoother results but may introduce bias, higher values for Degree will reduce the filter bias, but may 'over fit' the data and give a noisier result.",
+      "defaultValue":2
+    },
+    {
+      "name":"DISPLAY_RESULT",
+      "displayName":"Display Result",
+      "dataType":"BOOL",
+      "direction":"input",
+      "parameterType":"required",
+      "defaultValue":1,
+      "description":"Display result or not."
+    },
+    {
+      "name":"OUTPUT_RASTER",
+      "displayName":"Output Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"output",
+      "parameterType":"required",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "name":"GSF_GetFileURL",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"GSF_GetFileURL",
+  "display_name":"GSF GetFileURL",
+  "description":"GSF GetFileURL",
+  "schema":"envitask_3.0",
+  "parameters":[
+    {
+      "name":"input_raster",
+      "display_name":"Input Raster",
+      "type":"ENVIRaster",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"input_vector",
+      "display_name":"Input Vector",
+      "type":"ENVIVector",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"bands",
+      "display_name":"Bands",
+      "type":"intArray",
+      "dimensions":"[*]",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"data_ignore_value",
+      "display_name":"data ignore value",
+      "type":"double",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"linear_stretch",
+      "display_name":"linear stretch or not",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"linear_percent",
+      "display_name":"linear percent",
+      "type":"double",
+      "direction":"input",
+      "required":false,
+      "default":0.02
+    },
+    {
+      "name":"raster_color_slice",
+      "display_name":"Raster Color Slice",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"auto_percent_slice",
+      "display_name":"auto Percent Slice or not",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"number_of_ranges",
+      "display_name":"number of ranges",
+      "type":"uint",
+      "direction":"input",
+      "required":false,
+      "default":5
+    },
+    {
+      "name":"color_table_name",
+      "display_name":"Color Table Name",
+      "type":"string",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"valid_data_range",
+      "display_name":"Valid Data Range",
+      "type":"DOUBLEArray",
+      "dimensions":"[2]",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"class_ranges",
+      "display_name":"Class Ranges",
+      "type":"DOUBLEArray",
+      "dimensions":"[2,*]",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"class_colors",
+      "display_name":"Class Colors",
+      "type":"BYTEArray",
+      "dimensions":"[3,*]",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"reverse_color_table",
+      "display_name":"reverse Color Table?",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"slice_ignore_value",
+      "display_name":"Slice Ignore Value",
+      "type":"double",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"is_sar_image",
+      "display_name":"is SAR Image?",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"is_mask_file",
+      "display_name":"is Mask File?",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"map_type",
+      "display_name":"MapType",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "default":"wgs84",
+      "choice_list":["map","wgs84","web"]
+    },
+    {
+      "name":"keep_pngfiles",
+      "display_name":"keep pngfiles",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"get_map_extent",
+      "display_name":"Map2Extent",
+      "type":"bool",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"get_four_coords",
+      "display_name":"Map4Extent",
+      "type":"bool",
+      "direction":"input",
+      "required":false,
+      "default":false
+    },
+    {
+      "name":"get_pngfile_url",
+      "display_name":"PngFileURL",
+      "type":"bool",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"get_legend_url",
+      "display_name":"LegendPngURL",
+      "type":"bool",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"get_zipfile_url",
+      "display_name":"ZipFileURL",
+      "type":"bool",
+      "direction":"input",
+      "required":false
+    },
+    {
+      "name":"out_options",
+      "display_name":"Output Information",
+      "type":"hash",
+      "direction":"output",
+      "required":false
+    }
+  ]
+}

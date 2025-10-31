@@ -1,0 +1,205 @@
+;+
+; :DESCRIPTION:
+;     水面信息提取
+;
+; :Information:
+;     使用MNDWI--水体指数。
+;
+; :KEYWORDS:
+;     inputFile        -- 影像数据：<影像服务地址>
+;
+;     inputIDs         -- 影像ID：<字符串>
+;                         注：字符串格式，以","隔开，如1,2,3,4,5
+;
+;     roiCoords        -- 感兴趣区域坐标（Web墨卡托坐标，字符串）
+;                         注：格式为 x1,y1,x2,y2,x3,y3....
+;
+;     thresholdValue   -- 提取阈值：<浮点型，0.0>
+;                         注：默认0.0
+;
+;     smoothSize       -- 平滑窗口大小：<数字>
+;                         注：默认为5，必须为奇数
+;     minArea          -- 最小面积：<数字>
+;                         注：单位 km2，默认为0.05
+;
+;     outVectorFlag    -- 是否输出栅格：{Yes}、{No}
+;                         注：默认为No
+
+;     outRasterOptions -- 输出栅格文件信息
+;                         注：输出文件路径、ZIP压缩包URL、PNG图片URL、地理范围
+;     outVectorOptions -- 输出栅格文件信息
+;                         注：输出文件路径、ZIP压缩包URL
+;
+; :AUTHOR:
+;     杜会建    duhj@esrichina.com.cn
+;
+; :Date:
+;     2016年6月17日 11:11:22
+;
+; :Update:
+;     2016年8月23日 14:49:12 - 增加面积统计结果
+;-
+
+PRO GSF_WaterExtraction, inputFile=inputFile,  $
+  inputIDs=inputIDs, roiCoords=roiCoords,      $
+  thresholdValue=thresholdValue,               $
+  smoothSize=smoothSize, minArea=minArea,      $
+  outVectorFlag=outVectorFlag,                 $
+  outRasterOptions=outRasterOptions,           $
+  outVectorOptions=outVectorOptions
+
+  ;测试代码
+  ;  inputFile = 'D:/Temp/Water_Extraction/'
+  ;  inputIDs = 'beijing_miyun.dat'
+  ;  roiCoords='13002530.648814343,4953142.534164933,13028748.549516123,4953142.534164933,13028748.549516123,4929599.92945313,13002530.648814343,4929599.92945313'
+  ;
+  ;inputFile='https://imagery.arcgisonline.com/arcgis/rest/services/LandsatGLS/LandsatMaster/ImageServer/'
+  ;inputIDs = '15537'
+  ;roiCoords='13007030.895963678,4949638.0386126805,13025490.438294524,4949638.0386126805,13025490.438294524,4931254.93331012,13007030.895963678,4931254.93331012'
+
+  COMPILE_OPT idl2
+  e=ENVI(/headless)
+
+  ;几个可选参数
+  IF ~KEYWORD_SET(thresholdValue)    THEN thresholdValue     = 0.01
+  IF ~KEYWORD_SET(smoothSize)        THEN smoothSize         = 5
+  IF ~KEYWORD_SET(minArea)           THEN minArea            = 0.05
+  IF ~KEYWORD_SET(outVectorFlag)     THEN outVectorFlag      = 'No'
+
+  ;打开输入数据
+  ;将字符串IDs进行拆分，得到ID数组
+  arrIDs = STRTRIM(STRSPLIT(inputIDs, ',', /EXTRACT, COUNT=count),2)
+  scenes = !NULL
+
+  IF count GT 1 THEN BEGIN
+    FOR i=0, count-1 DO BEGIN
+      Raster = e.OpenRaster(inputFile+arrIDs[i], DATA_IGNORE_VALUE=0)
+      subRaster = GSF_ROICoordsMaskRaster(Raster, roiCoords, /rect_subset)
+      mndwiRaster = ENVISPECTRALINDEXRASTER(subRaster, 'mndwi')
+      scenes = [scenes, mndwiRaster]
+    ENDFOR
+    ;
+    mndwiMosaic = ENVIMOSAICRASTER(SCENES)
+  ENDIF ELSE BEGIN
+    ;如果只有一个文件，不需要镶嵌
+    Raster = e.OpenRaster(inputFile+arrIDs[0], DATA_IGNORE_VALUE=0)
+    subRaster = GSF_ROICoordsMaskRaster(Raster, roiCoords, /rect_subset)
+    mndwiMosaic = ENVISPECTRALINDEXRASTER(subRaster, 'mndwi')
+  ENDELSE
+
+  ;设置输出路径 outputFile
+  ;如果输入文件有时间属性，则使用文件时间，如果没有，则使用提交日期+jobid
+  time = Raster.TIME
+  CD, CURRENT=jobPath
+  jobid = FILE_BASENAME(jobPath)
+  IF time.ACQUISITION EQ !NULL THEN BEGIN
+    tmpTime = STRTRIM(bin_date(SYSTIME()),2)
+    tmpTime = '_'+tmpTime[0]+STRJOIN(STRING(tmpTime[1: 2], format='(I02)'))+ $
+      STRJOIN(STRING(tmpTime[3:*], format='(I02)'))+jobid
+    outputFile = 'Water'+tmpTime+'.dat'
+  ENDIF ELSE BEGIN
+    actime = strjoin((strsplit(time.ACQUISITION,'-T',/extract))[0:2])
+    outputFile = 'Water_'+actime+'_'+jobid+'.dat'
+  ENDELSE
+
+  ;密度分割，提取
+  ColorSliceTask = ENVITASK('ColorSliceClassification')
+  ColorSliceTask.INPUT_RASTER = mndwiMosaic
+  ColorSliceTask.DATA_MINIMUM = thresholdValue
+  ColorSliceTask.NUMBER_OF_RANGES = 1
+  ColorSliceTask.Execute
+
+  mndwiMosaic.Close
+
+  ;;初始化平滑Task
+  SmoothTask=ENVITASK('ClassificationSmoothing')
+  SmoothTask.INPUT_RASTER = ColorSliceTask.OUTPUT_RASTER
+  SmoothTask.KERNEL_SIZE = smoothSize
+  SmoothTask.EXECUTE
+
+  ;初始化聚类Task
+  AggregationTask=ENVITASK('ClassificationAggregation')
+  ref = Raster.SPATIALREF
+  aggregateSize = ref EQ !NULL ? 50 : minArea*1000000/PRODUCT(ref.PIXEL_SIZE)
+  AggregationTask.INPUT_RASTER = SmoothTask.OUTPUT_RASTER
+  AggregationTask.MINIMUM_SIZE = aggregateSize > 9
+  AggregationTask.EXECUTE
+
+  waterRaster = GSF_ROICoordsMaskRaster(AggregationTask.OUTPUT_RASTER, roiCoords)
+  waterRaster.export, outputFile, 'envi'
+
+  ;根据jobid获取颜色
+  watercolor = Get_Water_Color(jobid)
+
+  ;更新元数据信息
+  waterRaster = e.OpenRaster(outputFile)
+  waterRaster.METADATA.UpdateItem, 'class names', ['Background', 'Water']
+  waterRaster.METADATA.AddItem, 'class lookup', [[0,0,0],[watercolor]], error=err
+  waterRaster.METADATA.UpdateItem, 'class lookup', [[0,0,0],[watercolor]], error=err
+  waterRaster.METADATA.AddItem, 'data ignore value', 0, error=err
+  waterRaster.WriteMetadata
+
+  ;统计水面面积，转换为Albers等面积投影
+  coord_sys_str = 'PROJCS["WGS_1984_Albers",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Albers"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",110.0],PARAMETER["Standard_Parallel_1",25.0],PARAMETER["Standard_Parallel_2",47.0],PARAMETER["Latitude_Of_Origin",12.0],UNIT["Meter",1.0]]'
+  coordSys = ENVICoordSys(COORD_SYS_STR=coord_sys_str)
+  albersRaster = ENVIReprojectRaster(waterRaster,COORD_SYS=CoordSys)
+  ;统计睡眠面积
+  Stats = ENVIRasterStatistics(albersRaster,/HISTOGRAMS,HISTOGRAM_NBINS=2)
+  hist = Stats['HISTOGRAMS']
+  nPixels = hist[0].COUNTS
+
+  waterArea = nPixels[-1]*PRODUCT(ref.PIXEL_SIZE)/1000000.0
+
+  ;获取缩略图
+  waterRaster = e.OpenRaster(outputFile)
+  GSF_GetFileURL, input_raster=waterRaster, $
+    /get_pngfile_url, /get_map_extent, $
+    out_options=outRasterOptions
+
+  ;获取时间 20160828
+  year = 1111
+  IF time.ACQUISITION NE !NULL THEN $
+    year = fix((strsplit(time.ACQUISITION,'-T',/extract))[0])
+
+  ;把需要输出的参数输出
+  outRasterOptions = outRasterOptions + $
+    HASH("Date", year, "waterArea", waterArea)
+
+  ;如果输出矢量
+  IF STRUPCASE(outVectorFlag) EQ 'YES' THEN BEGIN
+
+    dotPos = STRPOS(outputFile, '.', /REVERSE_SEARCH)
+    outVectorFile = dotPos NE -1 ? STRMID(outputFile, 0, dotPos)+'.shp' : outputFile+'.shp'
+    ;初始化Task，栅格转矢量
+    ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+    ;设置输入参数
+    ClassToVectorTask.INPUT_RASTER = e.OpenRaster(outputFile)
+    ClassToVectorTask.EXPORT_CLASSES = ['Water']
+    ClassToVectorTask.OUTPUT_VECTOR_URI = outVectorFile
+
+    ClassToVectorTask.EXECUTE
+
+    ;获取压缩包URL
+    output_vector = e.OpenVector(outVectorFile)
+    GSF_GetFileURL, input_vector=output_vector, /get_zipfile_url, $
+      out_options=outVectorOptions
+  ENDIF
+
+  ;删除临时文件
+  tmpFiles = FILE_SEARCH('*temp*', count=count)
+  IF count NE 0 THEN FILE_DELETE, tmpFiles, /quiet
+END
+
+
+FUNCTION Get_Water_Color, jobid
+  rgb_table = [[255,50,80],[255,200,10],   $
+    [70,200,50],[59,140,250],[255,0,133],  $
+    [246,150,30],[200,99,252],[27,173,248]]
+  ; test code
+  ;  data = rebin(bindgen(8,1),256,256,/sample)
+  ;  i=image(data, rgb_table=rgb_table)
+  rgb_table = reform(rebin(reform(rgb_table,24,1),24,32),3,256)
+  ;
+  jobid = byte(long64(jobid))
+  return, rgb_table[*,jobid]
+END

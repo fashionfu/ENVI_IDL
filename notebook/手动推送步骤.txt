@@ -1,0 +1,152 @@
+==========================================
+GitHub 手动推送步骤（最简单版本）
+==========================================
+
+由于PowerShell的中文路径编码问题，建议使用以下手动步骤：
+
+方法1：使用命令提示符（推荐）
+==========================================
+
+1. 按 Win+R，输入 cmd，回车
+
+2. 复制以下命令（逐行执行）：
+
+   cd /d F:\02_MeteorologyWork
+   cd 02_正式
+   cd 2025-10月正式工作
+   cd 2022南方实验室培训
+   cd 2022ESE服务开发培训素材包
+
+3. 执行Git初始化：
+   git init
+
+4. 配置用户信息：
+   git config user.name "你的GitHub用户名"
+   git config user.email "你的邮箱"
+
+5. 创建.gitignore文件：
+   echo # IDL/ENVI 忽略文件 > .gitignore
+   echo *.tmp >> .gitignore
+   echo *.sav >> .gitignore
+   echo *.enp >> .gitignore
+   echo *.dat >> .gitignore
+   echo *.img >> .gitignore
+   echo *.hdf >> .gitignore
+   echo *.tif >> .gitignore
+   echo *.zip >> .gitignore
+   echo output/ >> .gitignore
+
+6. 添加远程仓库：
+   git remote add origin https://github.com/fashionfu/ENVI_IDL.git
+
+7. 添加所有文件：
+   git add .
+
+8. 查看状态：
+   git status
+
+9. 提交：
+   git commit -m "添加ENVI/IDL培训素材和学习指南"
+
+10. 推送（需要输入GitHub用户名和PAT令牌）：
+    git branch -M main
+    git push -u origin main
+
+
+方法2：使用Git Bash（更简单）
+==========================================
+
+1. 打开Windows资源管理器
+
+2. 导航到：F:\02_MeteorologyWork\02_正式\2025-10月正式工作\2022南方实验室培训\2022ESE服务开发培训素材包
+
+3. 在文件夹空白处右键，选择 "Git Bash Here"
+
+4. 在Git Bash中执行以下命令：
+
+   # 初始化
+   git init
+
+   # 配置用户信息
+   git config user.name "你的GitHub用户名"
+   git config user.email "你的邮箱"
+
+   # 添加远程仓库
+   git remote add origin https://github.com/fashionfu/ENVI_IDL.git
+
+   # 添加所有文件
+   git add .
+
+   # 提交
+   git commit -m "添加ENVI/IDL培训素材和学习指南"
+
+   # 推送
+   git branch -M main
+   git push -u origin main
+
+
+GitHub认证信息
+==========================================
+
+推送时会要求输入：
+
+Username: fashionfu
+Password: ghp_xxxxxxxxxxxxxxxxxxxxxxx（这里输入您的个人访问令牌PAT）
+
+注意：密码位置输入的是个人访问令牌，不是GitHub密码！
+
+
+如何创建个人访问令牌（PAT）
+==========================================
+
+1. 登录 GitHub.com
+
+2. 点击右上角头像 → Settings
+
+3. 左侧底部 → Developer settings
+
+4. Personal access tokens → Tokens (classic)
+
+5. Generate new token (classic)
+
+6. 填写：
+   - Note: ENVI_IDL_Project
+   - Expiration: No expiration
+   - 勾选：repo (完整仓库权限) ✓
+
+7. 点击 Generate token
+
+8. 复制令牌（形如：ghp_xxxxxxxxxxxx）
+
+9. 保存好令牌（只显示一次！）
+
+
+常见问题
+==========================================
+
+问题1：提示文件太大
+解决：.gitignore已经排除了大文件，如果还有问题，手动删除大文件后再推送
+
+问题2：认证失败
+解决：确保使用的是个人访问令牌（PAT），不是密码
+
+问题3：推送被拒绝
+解决：先执行 git pull origin main --allow-unrelated-histories
+
+问题4：网络超时
+解决：检查网络连接，或使用VPN
+
+
+验证推送成功
+==========================================
+
+推送成功后，访问：
+https://github.com/fashionfu/ENVI_IDL
+
+应该能看到所有文件！
+
+
+==========================================
+如有问题，请查看：笔记详情/GitHub推送指南.md
+==========================================
+

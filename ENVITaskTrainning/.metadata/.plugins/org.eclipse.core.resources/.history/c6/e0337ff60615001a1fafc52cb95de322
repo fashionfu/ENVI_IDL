@@ -1,0 +1,184 @@
+;+
+; :Description:
+;     MODIS数据几何校正、图像裁剪、水体提取、叶绿素反演、悬浮物浓度反演
+;
+; :Keywords:
+;
+;     input_file       -- 输入文件。MODIS L1B HDF文件
+;
+;     roi_coords       -- 感兴趣区域坐标：<字符串>： 输入坐标字符串（x1,y1,x2,y2...）或矢量文件zip包
+;                         注：如果为空，则处理全图;
+;
+;     chla_model       -- 叶绿素a浓度反演模型：<字符串>
+;                         默认为 (4.089*(nir/red)^2-0.746*(nir/red)+29.733)/1000
+;                         允许用户输入公式，其中：
+;                         blue代表蓝波段
+;                         green代表绿波段
+;                         red代表红波段
+;                         nir代表近红外波段
+;                         swir代表短波红外
+;
+;     tss_model        -- 悬浮物浓度反演模型：<字符串>
+;                         默认为 119.62*(red/green)^6.0823
+;
+;                         另外用户可输入完整原始波段运算公式
+;
+;     out_options      -- 返回信息
+;-
+
+PRO GSF_MODIS_WATER,      $
+  input_file=input_file,  $
+  roi_coords=roi_coords,  $
+  chla_model=chla_model,  $
+  tss_model=tss_model,    $
+  output_dir=output_dir,  $ ;输出目录
+  out_options=out_options
+
+  COMPILE_OPT idl2
+  e=ENVI(/headless)
+
+  ;test code
+  input_file='C:\Works\ENVITaskTrainning\06_GSFTasks\data\MOD021KM.A2013185.0245.005.2013185094144.hdf'
+  ;  roi_coords = 'C:\IDLWorkspace\_ESE_GSF_Tasks\HuNan_DongTingHu\DTH_Shapefile\dth_border.shp'
+  chla_model = '(4.089*(nir/red)^2-0.746*(nir/red)+29.733)/1000'
+  tss_model = '119.62*(red/green)^6.0823'
+
+  ;如果未设置输出目录，则使用当前目录
+  IF ~KEYWORD_SET(output_dir) THEN CD,current=output_dir
+
+  ;任务进度
+  gsf_progress = OBJ_NEW('GSF_Progress_Message')
+  gsf_progress.SetProgress, percent=5, message='Executing...'
+
+  ;打开MODIS数据
+  rasters = e.OpenRaster(input_file)
+
+  ;波段裁剪，只获取蓝、绿、红、近红外、短波1。5个波段
+  ;645  858.5  469   555
+  ref_raster = ENVISubsetRaster(rasters[0], bands=[2,3,0,1])
+
+  ;添加波长信息
+  ref_raster.Metadata.AddItem, 'wavelength units', 'Nanometers'
+  ref_raster.Metadata.AddItem, 'wavelength', [469.0,555.0,645.0,858.5]
+
+  ;判断公式有效性
+  ;chla_model = '4.089*(nir/red)^2-0.746*(nir/red)+29.733'
+  ;tss_model = '119.62*(red/green)^6.0823'
+  is_right = GSF_ConvertAndCheck_BandMathExpression(ref_raster, expression=chla_model)
+  IF ~is_right THEN MESSAGE, 'Invalid Expression (Chl-a): ' + chla_model, /noname
+
+  ;判断公式有效性
+  is_right = GSF_ConvertAndCheck_BandMathExpression(ref_raster, expression=tss_model)
+  IF ~is_right THEN MESSAGE, 'Invalid Expression (TSS): ' + tss_model, /noname
+
+  ;获取经纬度波段
+  lat_file = input_file.Replace('.hdf', '_Latitude.dat', /fold_case)
+  lon_file = input_file.Replace('.hdf', '_Longitude.dat', /fold_case)
+  qua_file = input_file.Replace('.hdf', '_Quality.dat', /fold_case)
+  lat_raster = e.OpenRaster(lat_file)
+  lon_raster = e.OpenRaster(lon_file)
+  qua_raster = e.OpenRaster(qua_file)
+  
+  gsf_progress.SetProgress, percent=10, message='Reproject GLT'
+
+  ;几何校正
+  Task = ENVITask('ReprojectGLT')
+  Task.Input_Raster = ref_raster
+  Task.Latitude_Raster = lat_raster
+  Task.Longitude_Raster = lon_raster
+  Task.Quality_Raster = qua_raster
+  Task.Quality_Flag = 255
+  Task.Execute
+  
+  gsf_progress.SetProgress, percent=30, message='Raster Subset'
+
+  ;图像裁剪
+  sub_raster = GSF_ROICoordsMaskRaster(Task.Output_Raster, roi_coords)
+  
+  gsf_progress.SetProgress, percent=40, message='Water Extraction'
+
+  ;水体提取，计算NDWI
+  water_raster = ENVIPixelwiseBandMathRaster(sub_raster, '(float(b2)-b4)/(float(b2)+b4) gt 0.01')
+
+  ;添加元数据信息，修改为分类图像
+  water_raster.METADATA.AddItem, 'classes', 2
+  water_raster.METADATA.AddItem, 'class names', ['Background', 'Water']
+  water_raster.METADATA.AddItem, 'class lookup', [[0,0,0],[40,150,250]]
+  water_raster.METADATA.AddItem, 'data ignore value', 0, error=err
+
+  ;获取水面最终结果
+  fbasename = FILE_BASENAME(input_file, '.hdf', /fold_case)
+  water_file = FILEPATH(fbasename+'_water.dat', root_dir=output_dir)
+  
+  ;去除小斑点
+  SievingTask = ENVITASK('ClassificationSieving')
+  SievingTask.INPUT_RASTER = water_raster
+  SievingTask.MINIMUM_SIZE = 10 ;10km2
+  SievingTask.CLASS_ORDER = ['Water']
+  SievingTask.OUTPUT_RASTER_URI = water_file
+  SievingTask.Execute
+  
+  gsf_progress.SetProgress, percent=60, message='Water Statistics'
+
+  water_raster.Close
+  water_raster = e.OpenRaster(water_file)
+
+  ;统计水面面积 （转换为Albers等面积投影）
+  coord_sys_str = 'PROJCS["WGS_1984_Albers",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Albers"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",110.0],PARAMETER["Standard_Parallel_1",27.0],PARAMETER["Standard_Parallel_2",45.0],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]'
+  albers_raster = ENVIReprojectRaster(water_raster, coord_sys=ENVICoordSys(coord_sys_str=coord_sys_str))
+  stats = ENVIRasterStatistics(albers_raster, histogram_binsize=1)
+  water_area = ((stats['HISTOGRAMS'])[0])['COUNTS']*PRODUCT(albers_raster.spatialref.pixel_size)/1e6
+  albers_raster.Close
+
+  ;获取快视图、坐标范围
+  GSF_GetFileURL, input_raster=water_raster, /get_pngfile_url, png_width=1080, $
+    /get_map_extent, out_options=tmp_options
+
+  out_options = ORDEREDHASH('map_extent', tmp_options['MapExtent'],  $
+    'water_raster_url', water_file, 'water_quickview_url', tmp_options['PngFileURL'], $
+    'water_area', water_area)
+  tmp_options = !NULL
+
+  gsf_progress.SetProgress, percent=60, message='Calculating Chl-a'
+
+  ;叶绿素a反演
+  chla_file = FILEPATH(fbasename+'_chla.dat', root_dir=output_dir)
+  chla_full = ENVIPixelwiseBandMathRaster(sub_raster, chla_model)
+  chla_raster = ENVIMaskRaster(chla_full, water_raster)
+  chla_raster.Export, chla_file, 'envi', data_ignore_value=0
+  chla_raster.Close & chla_full.Close
+  chla_raster = e.OpenRaster(chla_file)
+
+  ;获取叶绿素a快视图
+  gsf_progress.SetProgress, percent=70, message='Generating Chl-a QuickView'
+  GSF_GetFileURL, input_raster=chla_raster, /get_pngfile_url, valid_data_range=[0.02,0.05],    $
+    color_table_name='Rainbow', png_width=1080, output_dir=output_dir, legend_unit='mg/L', $
+    get_legend_url=get_legend_url, legend_major=4, out_options=tmp_options
+  out_options += ORDEREDHASH('chla_raster_url', chla_file, 'chla_quickview_url', tmp_options['PngFileURL'])
+  tmp_options = !NULL
+
+  gsf_progress.SetProgress, percent=80, message='Calculating TSS'
+
+  ;悬浮物浓度TSS反演
+  tss_full = ENVIPixelwiseBandMathRaster(sub_raster, tss_model)
+  tss_raster = ENVIMaskRaster(tss_full, water_raster)
+
+  tss_file = FILEPATH(fbasename+'_tss.dat', root_dir=output_dir)
+  tss_raster.Export, tss_file, 'envi', data_ignore_value=0
+  tss_raster.Close & tss_full.Close
+  tss_raster = e.OpenRaster(tss_file)
+
+  ;获取悬浮物浓度快视图
+  gsf_progress.SetProgress, percent=90, message='Generating TSS QuickView'
+
+  GSF_GetFileURL, input_raster=tss_raster, /get_pngfile_url, valid_data_range=[0,60], $
+    color_table_name='Rainbow', png_width=1080, /get_legend_url, legend_major=7,  $
+    out_options=tmp_options
+  out_options += ORDEREDHASH('tss_raster_url', tss_file, 'tss_quickview_url', tmp_options['PngFileURL'])
+  tmp_options = !NULL
+
+  ;删除中间结果
+  GSF_File_Delete_Enhanced, sub_raster
+
+  gsf_progress.Finish
+END

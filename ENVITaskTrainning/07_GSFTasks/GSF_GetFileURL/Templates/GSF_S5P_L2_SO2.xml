@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ENVI_FILE_TEMPLATE>
+  <HDF5 name="GSF_S5P_L2_SO2">
+    <RASTER>
+      <DATASET>/PRODUCT/sulfurdioxide_total_vertical_column</DATASET>
+      <XGRID>/PRODUCT/longitude</XGRID>
+      <YGRID>/PRODUCT/latitude</YGRID>
+      <METADATA name="acquisition time" id="//time_coverage_start"/>
+      <METADATA name="time coverage start" id="//time_coverage_start"/>
+      <METADATA name="time coverage end" id="//time_coverage_end"/>
+      <METADATA name="platform" id="//platform"/>
+      <METADATA name="sensor" id="//sensor"/>
+      <METADATA name="spatial resolution" id="//spatial_resolution"/>
+      <METADATA name="title" id="//title"/>
+      <METADATA name="platform" id="//platform"/>
+    </RASTER>
+    <RASTER>
+      <DATASET>/PRODUCT/qa_value</DATASET>
+    </RASTER>
+  </HDF5>
+</ENVI_FILE_TEMPLATE>

@@ -1,0 +1,35 @@
+PRO test_Build_Footprint
+  COMPILE_OPT idl2
+  e=envi()
+
+  file = FILEPATH('beijingRGB.dat', root_dir=ROUTINE_DIR(), subdirectory='data')
+  Raster = e.OpenRaster(file)
+  outShpFile = e.GetTemporaryFilename('shp', /cleanup_on_exit)
+  ;
+  view = e.GetView()
+  layer = view.CreateLayer(Raster)
+  view.zoom, 1, /full_extent
+
+  ;波段裁剪，制作掩膜文件
+  band1 = ENVISubsetRaster(Raster, BANDS=[0])
+  maskRaster = ENVIBinaryGTThresholdRaster(band1, 0)
+
+  tmpLayer = view.CreateLayer(maskRaster)
+
+  ;生成分类结果，并显示
+  ColorSliceTask = ENVITASK('ColorSliceClassification')
+  ColorSliceTask.INPUT_RASTER = maskRaster
+  ColorSliceTask.NUMBER_OF_RANGES = 2
+  ColorSliceTask.Execute
+
+  tmpLayer = view.CreateLayer(ColorSliceTask.OUTPUT_RASTER)
+
+  ;生成shp文件
+  ClassToVectorTask = ENVITASK('ClassificationToShapefile')
+  ClassToVectorTask.INPUT_RASTER = ColorSliceTask.OUTPUT_RASTER
+  ClassToVectorTask.EXPORT_CLASSES = ['1 to 1']
+  ClassToVectorTask.OUTPUT_VECTOR_URI = outShpFile
+  ClassToVectorTask.Execute
+
+  shpLayer = View.CreateLayer(ClassToVectorTask.OUTPUT_VECTOR)
+END

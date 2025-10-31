@@ -1,0 +1,18 @@
+PRO runUserInterfaceElements_ui
+  COMPILE_OPT IDL2, HIDDEN
+  e = ENVI()
+
+  ; Run the custom task
+  root_dir = FILE_DIRNAME(ROUTINE_FILEPATH())
+  taskFile = FILEPATH('UserInterfaceElements.task', root_dir=root_dir)
+  Task = ENVITask(taskFile)
+  
+  ;µ¯³ö½çÃæ
+  IF e.VERSION GE '6.5.0' THEN BEGIN
+    e.UI.RunTask, Task
+  ENDIF ELSE BEGIN
+    dynamicUI = e.UI.SelectTaskParameters(Task)
+    IF (dynamicUI NE 'OK') THEN RETURN
+    Task.Execute
+  ENDELSE
+END

@@ -1,0 +1,62 @@
+{
+  "name":"test_isodata_task",
+  "base_class":"ENVITaskFromProcedure",
+  "routine":"test_isodata_task",
+  "display_name":"Isodata",
+  "description":"Use this template as a reference when building tasks for a new procedure.",
+  "schema":"envitask_3.1",
+  "parameters":[
+    {
+      "name":"raster",
+      "display_name":"Input Raster",
+      "type":"ENVIRASTER",
+      "direction":"input",
+      "required":true,
+      "description":"Specify an input raster to process."
+    },
+    {
+      "name":"iterations",
+      "display_name":"iterations",
+      "type":"string",
+      "direction":"input",
+      "required":false,
+      "default":"10",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    },
+    {
+      "name":"num_classes",
+      "display_name":"num_classes",
+      "type":"string",
+      "direction":"input",
+      "required":false,
+      "default":"5",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    },
+    {
+      "name":"kernel_size",
+      "display_name":"kernel_size",
+      "type":"string",
+      "direction":"input",
+      "required":false,
+      "default":"5",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    },
+    {
+      "name":"minimum_size",
+      "display_name":"minimum_size",
+      "type":"string",
+      "direction":"input",
+      "required":false,
+      "default":"9",
+      "description":"This is a reference to the output raster of filetype ENVI."
+    },
+    {
+      "name":"output_path",
+      "display_name":"output_path",
+      "type":"string",
+      "direction":"input",
+      "required":true,
+      "description":"This is a reference to the output raster of filetype ENVI."
+    }
+  ]
+}
