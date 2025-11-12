@@ -4,7 +4,7 @@
 ; 输入: Landsat 9 MTL文件
 ; 输出: NDVI、NDWI、NDBI影像（保存到results文件夹）
 ; 作者: Auto
-; 日期: 2024
+; 日期: 2025
 ;-
 
 ; 辅助函数：从XML文件中提取标签值（通用函数）
