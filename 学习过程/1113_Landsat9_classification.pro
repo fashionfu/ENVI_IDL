@@ -5,7 +5,7 @@
 ; 输入: ROI文件、光谱指数结果（NDVI、NDWI、NDBI）
 ; 输出: 分类结果（保存到results文件夹）
 ; 作者: Auto
-; 日期: 2024
+; 日期: 2025-11-13
 ;-
 
 ; 辅助函数：从XML文件中提取标签值（通用函数）
@@ -1872,9 +1872,9 @@ PRO landsat9_classification
     PRINT, '========================================='
     PRINT, ''
     
-    ; 读取分类结果文件
-    classification2021File = outputDir + PATH_SEP() + 'classification_2021_final.dat'
-    classification2025File = outputDir + PATH_SEP() + 'classification_2025_final.dat'
+    ; 读取分类结果文件（使用已配准的文件）
+    classification2021File = outputDir + PATH_SEP() + 'classification_2021.dat'
+    classification2025File = outputDir + PATH_SEP() + 'classification_2025_warp.dat'
     
     IF ~FILE_TEST(classification2021File) THEN BEGIN
       PRINT, '错误: 2021年分类结果文件不存在: ' + classification2021File
@@ -1931,7 +1931,8 @@ PRO landsat9_classification
         ENDELSE
         IF ~OBJ_VALID(spatialRef2025) THEN BEGIN
           PRINT, '  2025年分类结果缺少空间参考信息，正在添加...'
-          class2025_temp = add_spatial_ref_to_raster_file(class2025, dataPath2025, classification2025File)
+          ; 注意：2025年影像已配准到2021年基础影像，因此使用dataPath2021获取空间参考
+          class2025_temp = add_spatial_ref_to_raster_file(class2025, dataPath2021, classification2025File)
           IF OBJ_VALID(class2025_temp) THEN BEGIN
             class2025.Close
             class2025 = class2025_temp
