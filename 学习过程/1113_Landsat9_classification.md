@@ -4,7 +4,7 @@
 
 <div align="center">
 
-![分类与变化检测结果](https://raw.githubusercontent.com/fashionfu/ENVI_IDL/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1113_%E5%9B%BE%E5%83%8F%E7%BB%93%E6%9E%9C.png)
+<img src="https://raw.githubusercontent.com/fashionfu/ENVI_IDL/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1113_%E5%9B%BE%E5%83%8F%E7%BB%93%E6%9E%9C.png" alt="分类与变化检测结果" style="width: 90%; max-width: 1200px; height: auto;">
 
 **图1：2021年随机森林监督分类结果** | **图2：2025年随机森林监督分类结果** | **图3：地面控制点校正后2025年结果** | **图4：变化差值图**
 
@@ -410,5 +410,6 @@ outputDir = 'E:\1021WaterData\LC09\LC09_L2SP_121043_20211206_20230505_02_T1\resu
 - 完整的后处理流程提高了分类质量
 
 通过这一流程，可以准确地进行多时相分类结果对比和变化检测分析。
+
 
 
