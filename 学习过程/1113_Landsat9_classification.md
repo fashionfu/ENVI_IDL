@@ -1,5 +1,35 @@
 # Landsat 9 随机森林监督分类与变化检测
 
+<div align="center">
+
+<table>
+<tr>
+<td align="center" width="100%">
+
+<a href="https://raw.githubusercontent.com/fashionfu/ENVI_IDL/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1113_%E5%9B%BE%E5%83%8F%E7%BB%93%E6%9E%9C.png">
+<img src="https://raw.githubusercontent.com/fashionfu/ENVI_IDL/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1113_%E5%9B%BE%E5%83%8F%E7%BB%93%E6%9E%9C.png" alt="分类与变化检测结果">
+</a>
+
+</td>
+</tr>
+<tr>
+<td align="center">
+
+**图1：2021年随机森林监督分类结果** | **图2：2025年随机森林监督分类结果** | **图3：地面控制点校正后2025年结果** | **图4：变化差值图**
+
+*从左至右依次展示了分类处理流程的四个关键步骤：原始分类结果、配准校正和最终的变化检测结果*
+
+<sub>💡 **提示**：点击图片可查看大图</sub>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+---
+
+
 ## 处理结果展示
 
 <div align="center">
@@ -410,6 +440,7 @@ outputDir = 'E:\1021WaterData\LC09\LC09_L2SP_121043_20211206_20230505_02_T1\resu
 - 完整的后处理流程提高了分类质量
 
 通过这一流程，可以准确地进行多时相分类结果对比和变化检测分析。
+
 
 
 
