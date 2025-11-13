@@ -2,7 +2,7 @@
 
 ## 文档信息
 - **文档名称**: 1112_Landsat9_spectral_indices.md
-- **创建日期**: 2024-12-11
+- **创建日期**: 2025-11-12
 - **代码文件**: `landsat9_spectral_indices.pro`
 - **参考代码**: `test1110_finalndvi.pro`
 
@@ -441,4 +441,5 @@ mapInfo = ENVI_MAP_INFO_CREATE( $
 5. **正确的函数使用**：使用 `ENVILayerStackRaster` 等正确的函数
 
 通过这些改进，代码能够成功处理Landsat 9数据，计算光谱指数，并进行对比分析。
+
 
