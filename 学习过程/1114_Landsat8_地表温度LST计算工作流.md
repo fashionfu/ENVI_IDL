@@ -6,7 +6,7 @@
 
 下图展示了使用本程序对Landsat 8数据进行地表温度反演的结果。图中不同颜色代表不同的地表温度值，红色区域表示高温区域，蓝色区域表示低温区域。
 
-![Landsat 8 地表温度反演结果](https://raw.githubusercontent.com/fashionfu/ENVI_IDL/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1114_%E6%B8%A9%E5%BA%A6%E5%8F%8D%E6%BC%94%E5%9B%BE.png)
+![Landsat 8 地表温度反演结果](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1114_%E6%B8%A9%E5%BA%A6%E5%8F%8D%E6%BC%94.png)
 
 **图1：Landsat 8 地表温度（LST）反演结果**
 
@@ -549,4 +549,5 @@ test_Landsat8_LST_workflow
   - 新增Data Ignore Value自动设置功能（-999）
   - 增强空间参考处理（支持从GeoTIFF继承、读取四角坐标）
   - 改进XML标签解析功能
+
 
