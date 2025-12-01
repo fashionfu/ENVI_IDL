@@ -1,0 +1,42 @@
+{
+  "name":"test_1201Footprint_ENVITask",
+  "baseClass":"ENVITaskFromProcedure",
+  "routine":"test_1201Footprint_ENVITask",
+  "displayName":"Build Raster Footprint",
+  "version":"5.3",
+  "description":"Extract raster footprint (valid data area boundary) and output as Shapefile vector file.",
+  "parameters":[
+    {
+      "name":"INPUT_RASTER",
+      "displayName":"Input Raster",
+      "dataType":"ENVIRASTER",
+      "direction":"input",
+      "parameterType":"optional",
+      "description":"Specify the input raster object. Either Input Raster or Input File URI must be provided."
+    },
+    {
+      "name":"INPUT_FILE_URI",
+      "displayName":"Input File URI",
+      "dataType":"ENVIURI",
+      "direction":"input",
+      "parameterType":"optional",
+      "description":"Specify the input raster file path. Either Input Raster or Input File URI must be provided."
+    },
+    {
+      "name":"Background_Value",
+      "displayName":"Background Value",
+      "dataType":"double",
+      "direction":"input",
+      "parameterType":"optional",
+      "description":"Specify the background value to exclude. Leave empty to auto-detect using NoData value (recommended)."
+    },
+    {
+      "name":"OUTPUT_VECTOR_URI",
+      "displayName":"Output Vector URI",
+      "dataType":"ENVIURI",
+      "direction":"input",
+      "parameterType":"required",
+      "description":"Specify the output Shapefile path for the footprint vector."
+    }
+  ]
+}
