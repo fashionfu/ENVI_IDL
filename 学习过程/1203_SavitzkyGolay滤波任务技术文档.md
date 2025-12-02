@@ -3,7 +3,7 @@
 ## 1. 项目概述
 
 本项目实现了一个基于ENVI Task框架的Savitzky-Golay滤波处理工具，用于对高光谱或多光谱遥感数据进行光谱平滑和导数计算。该工具支持单文件处理和批量处理两种模式，适用于高分数据的预处理工作。
-
+![VFC数据验证](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1202_GF1%E6%95%B0%E6%8D%AE%E9%AA%8C%E8%AF%81%E5%9B%BE.png)
 ### 1.1 主要功能
 
 - **光谱平滑**：使用Savitzky-Golay滤波器对光谱曲线进行平滑处理，去除噪声
@@ -627,4 +627,5 @@ tile_data = ENVI_GET_TILE(tile_id, i)
 
 **文档版本**：1.1  
 **最后更新**：2024年12月
+
 
