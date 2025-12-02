@@ -1,0 +1,16 @@
+{
+  "schema":"envitask_3.2",
+  "show_preview":false,
+  "show_display_result":true,
+  "parameters":[
+    {
+      "name":"MINIMUM_NDVI",
+      "type":"IDLSlider_UI"
+    },
+    {
+      "name":"MAXIMUM_NDVI",
+      "type":"IDLSlider_UI"
+    }
+  ]
+}
+
