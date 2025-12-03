@@ -1,18 +1,19 @@
 # ENVI IDL 遥感图像处理函数完整中文参考手册
 
-> **版本**: 🎯 终极完整版 v5.0 - ENVI面向对象API全收录  
-> **特点**: 10次深度遍历 + ENVI OOP API完整提取  
-> **更新**: 新增ENVI面向对象开发API 7大章节（180个方法）  
+> **版本**: 🎯 终极完整版 v5.1 - ENVI面向对象API全收录 + 自定义工具集  
+> **特点**: 10次深度遍历 + ENVI OOP API完整提取 + 5个完整工具集  
+> **更新**: 新增ENVI面向对象开发API 7大章节（180个方法）+ 自定义任务与工具集章节（5个工具集）  
 > **适用**: ENVI 5.6 / IDL 8.9 / ENVI API 4.2+
 
 ## 📋 文档说明
 
 本手册经过以下深度处理：
+
 - ✅ **10次深度遍历**官方文档和代码库
 - ✅ **完整提取** ENVI图像处理任务（683个Task）
 - ✅ **新增** IDL基础编程（364个函数）
 - ✅ **新增** ENVI面向对象API（180个方法）⭐
-- ✅ **智能分类** 25大类别（ENVI任务12类 + IDL 6类 + ENVI OOP 7类）
+- ✅ **智能分类** 26大类别（ENVI任务12类 + IDL 6类 + ENVI OOP 7类 + 自定义工具集1类）
 - ✅ **详细注释** 每个函数/方法都有中文说明和完整示例
 - ✅ **实战导向** 1200+个可运行的实际应用代码
 - ✅ **全面附录** 8个实用参考章节
@@ -31,11 +32,32 @@
   - ✅ 数据可视化（IDL绘图 + ENVI视图）
   - ✅ 自动化工作流（批处理、服务器）
 
+## 🆕 v5.1 重大更新
+
+### 新增自定义任务与工具集章节（5个完整工具集）
+
+**包含内容**：
+
+1. **test_1201footprint_envitask** - 栅格轮廓提取工具
+2. **test_1202VFCTask** - 植被覆盖度计算任务
+3. **test_1204_geotiff_spatial_ref** - Landsat GeoTIFF空间参考读取
+4. **test_1205_WaterExtractionBatch** - Landsat L2水体提取批量处理
+5. **test_1206_LandsatSpatialRefMosaic** - Landsat空间参考与图像镶嵌
+
+**为什么重要**：
+
+- 🛠️ **实用工具集**: 涵盖栅格处理、空间参考管理、批量处理等实际应用场景
+- 🛠️ **完整文档**: 每个工具都包含详细的使用说明、技术文档和代码示例
+- 🛠️ **即用即得**: 可直接使用的完整工具集，无需额外开发
+
+---
+
 ## 🆕 v5.0 重大更新
 
 ### 新增ENVI面向对象开发API（180个方法）
 
 **为什么重要**：
+
 - 🔥 **处理超大数据**: ENVIRasterIterator瓦片迭代器，解决内存限制
 - 🔥 **精确控制**: 直接操作像素、元数据、空间参考
 - 🔥 **高级开发**: 创建自定义工具、界面、工作流
@@ -43,6 +65,7 @@
 - 🔥 **灵活集成**: 与ArcGIS、Web服务、云平台集成
 
 **包含内容**：
+
 1. **核心对象API** (32个方法): ENVI主对象、ENVIRaster、ENVIRasterIterator ⭐
 2. **可视化API** (56个方法): ENVIView、图层控制、交互显示
 3. **空间参考API** (28个方法): 坐标系统、投影转换
@@ -88,6 +111,10 @@
 - [二十三、ENVI用户界面API](#二十三envi用户界面api) - **18个方法** ✅
 - [二十四、ENVI工作流API](#二十四envi工作流api) - **12个方法** ✅
 - [二十五、ENVI服务器与通信API](#二十五envi服务器与通信api) - **10个方法** ✅
+
+### 自定义任务与工具集（✅ 新增）
+
+- [二十六、自定义任务与工具集](#二十六自定义任务与工具集) - **5个完整工具集** ✅
 
 ---
 
@@ -22730,20 +22757,20 @@ scaled = BYTSCL(data, TOP=100)
 
 **📝 中文说明**: 索引数组生成函数对比表
 
-| 函数 | 数据类型 | 范围 | 字节数 | 典型用途 |
-|------|---------|------|-------|---------|
-| BINDGEN | Byte | 0-255 | 1 | 颜色索引 |
-| INDGEN | Integer | -32768 to 32767 | 2 | 小范围索引 |
-| SINDGEN | Short Integer | -32768 to 32767 | 2 | 同INDGEN |
-| UINDGEN | Unsigned Int | 0-65535 | 2 | 正数索引 |
-| LINDGEN | Long | -2^31 to 2^31-1 | 4 | 大数组索引 |
-| ULINDGEN | Unsigned Long | 0 to 2^32-1 | 4 | 大正数索引 |
-| L64INDGEN | Long64 | -2^63 to 2^63-1 | 8 | 超大数组 |
-| UL64INDGEN | Unsigned Long64 | 0 to 2^64-1 | 8 | 最大索引 |
-| FINDGEN | Float | 全范围 | 4 | 浮点索引 |
-| DINDGEN | Double | 全范围 | 8 | 高精度 |
-| CINDGEN | Complex | 复数 | 8 | 复数运算 |
-| DCINDGEN | Double Complex | 复数 | 16 | 高精度复数 |
+| 函数       | 数据类型        | 范围            | 字节数 | 典型用途   |
+| ---------- | --------------- | --------------- | ------ | ---------- |
+| BINDGEN    | Byte            | 0-255           | 1      | 颜色索引   |
+| INDGEN     | Integer         | -32768 to 32767 | 2      | 小范围索引 |
+| SINDGEN    | Short Integer   | -32768 to 32767 | 2      | 同INDGEN   |
+| UINDGEN    | Unsigned Int    | 0-65535         | 2      | 正数索引   |
+| LINDGEN    | Long            | -2^31 to 2^31-1 | 4      | 大数组索引 |
+| ULINDGEN   | Unsigned Long   | 0 to 2^32-1     | 4      | 大正数索引 |
+| L64INDGEN  | Long64          | -2^63 to 2^63-1 | 8      | 超大数组   |
+| UL64INDGEN | Unsigned Long64 | 0 to 2^64-1     | 8      | 最大索引   |
+| FINDGEN    | Float           | 全范围          | 4      | 浮点索引   |
+| DINDGEN    | Double          | 全范围          | 8      | 高精度     |
+| CINDGEN    | Complex         | 复数            | 8      | 复数运算   |
+| DCINDGEN   | Double Complex  | 复数            | 16     | 高精度复数 |
 
 **💡 使用示例**:
 
@@ -22775,22 +22802,22 @@ ELSE idx = L64INDGEN(n)
 
 **📝 中文说明**: 数组创建函数完整对比
 
-| 函数 | 类型 | 初值 | 用途 |
-|------|------|------|------|
-| BYTARR | Byte (0-255) | 0B | 图像、掩膜 |
-| INTARR | Integer | 0 | 小整数 |
-| UINTARR | Unsigned Int | 0U | 正整数 |
-| LONARR | Long | 0L | 大整数、计数 |
-| ULONARR | Unsigned Long | 0UL | 大正整数 |
-| LON64ARR | Long64 | 0LL | 超大整数 |
-| ULON64ARR | Unsigned Long64 | 0ULL | 超大正整数 |
-| FLTARR | Float | 0.0 | 浮点数据 |
-| DBLARR | Double | 0.0D | 高精度 |
-| COMPLEXARR | Complex | (0,0) | 复数 |
-| DCOMPLEXARR | Double Complex | (0D,0D) | 高精度复数 |
-| STRARR | String | '' | 字符串 |
-| PTRARR | Pointer | Null | 指针 |
-| OBJARR | Object | Null | 对象引用 |
+| 函数        | 类型            | 初值    | 用途         |
+| ----------- | --------------- | ------- | ------------ |
+| BYTARR      | Byte (0-255)    | 0B      | 图像、掩膜   |
+| INTARR      | Integer         | 0       | 小整数       |
+| UINTARR     | Unsigned Int    | 0U      | 正整数       |
+| LONARR      | Long            | 0L      | 大整数、计数 |
+| ULONARR     | Unsigned Long   | 0UL     | 大正整数     |
+| LON64ARR    | Long64          | 0LL     | 超大整数     |
+| ULON64ARR   | Unsigned Long64 | 0ULL    | 超大正整数   |
+| FLTARR      | Float           | 0.0     | 浮点数据     |
+| DBLARR      | Double          | 0.0D    | 高精度       |
+| COMPLEXARR  | Complex         | (0,0)   | 复数         |
+| DCOMPLEXARR | Double Complex  | (0D,0D) | 高精度复数   |
+| STRARR      | String          | ''      | 字符串       |
+| PTRARR      | Pointer         | Null    | 指针         |
+| OBJARR      | Object          | Null    | 对象引用     |
 
 **💡 使用示例**:
 
@@ -26764,6 +26791,7 @@ PREF_SET, 'MY_DATA_DIR', '/data', /COMMIT
 **🔧 类型**: 对象类 (Object Class)
 
 **📋 主要方法**:
+
 - OpenRaster - 打开栅格文件
 - OpenVector - 打开矢量文件  
 - OpenPointCloud - 打开点云文件
@@ -26818,6 +26846,7 @@ e.Close
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - NBANDS - 波段数
 - NCOLUMNS - 列数
 - NROWS - 行数
@@ -27087,6 +27116,7 @@ output_raster.Save
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - BANDS (Get) - 迭代的波段
 - CURRENT_BAND (Get) - 当前瓦片的波段索引
 - CURRENT_SUBRECT (Get) - 当前瓦片的空间范围
@@ -27096,6 +27126,7 @@ output_raster.Save
 - TILE_SIZE (Get) - 瓦片大小
 
 **📋 主要方法**:
+
 - Next() - 获取下一个瓦片
 - Previous() - 获取上一个瓦片
 - Reset - 重置到第一个瓦片
@@ -27580,6 +27611,7 @@ layer.BRIGHTNESS = 0.5
 **🔧 类型**: 对象类
 
 **📋 主要属性** (Get/Set):
+
 - RASTER - 关联的ENVIRaster对象
 - BANDS - 显示的波段索引
 - NAME - 图层名称
@@ -27651,6 +27683,7 @@ layer.NAME = 'Landsat 8 - 2024-03-15'
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - ROI - 关联的ENVIROI对象
 - HIDE - 是否隐藏
 - TRANSPARENCY - 透明度
@@ -27681,6 +27714,7 @@ roiLayer.HIDE = 1
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - VECTOR - ENVIVector对象
 - FILL_COLOR - 填充颜色
 - STROKE_COLOR - 轮廓颜色  
@@ -27723,6 +27757,7 @@ lineLayer.STROKE_STYLE = 'dash'  ; 虚线
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - HIDE - 隐藏
 - TRANSPARENCY - 透明度
 - COLOR - 网格线颜色
@@ -27796,6 +27831,7 @@ annoLayer = layer.AddAnnotationSet(annoSet)
 **⚙️ 主要参数**: COORD_SYS_CODE= (EPSG代码), COORD_SYS_STR= (WKT字符串)
 
 **📋 主要属性**:
+
 - COORD_SYS_CODE (Get) - EPSG代码
 - COORD_SYS_STR (Get) - WKT字符串
 
@@ -28046,6 +28082,7 @@ ENDIF
 **🔧 类型**: 对象类
 
 **📋 主要属性**:
+
 - COUNT (Get) - 元数据项数量
 - TAGS (Get) - 所有标签名称数组
 
@@ -28592,57 +28629,58 @@ endforeach
 
 ### B. 常用光谱指数公式
 
-| 指数名称 | 英文全称 | 公式 | 波段要求 | 主要用途 |
-|---------|---------|------|---------|---------|
-| NDVI | Normalized Difference Vegetation Index | (NIR-Red)/(NIR+Red) | 红光、近红外 | 植被覆盖度、生长状况 |
-| EVI | Enhanced Vegetation Index | 2.5×(NIR-Red)/(NIR+6×Red-7.5×Blue+1) | 蓝光、红光、近红外 | 改进的植被指数，减少土壤和大气影响 |
-| SAVI | Soil Adjusted Vegetation Index | 1.5×(NIR-Red)/(NIR+Red+0.5) | 红光、近红外 | 稀疏植被，考虑土壤背景 |
-| NDWI | Normalized Difference Water Index | (Green-NIR)/(Green+NIR) | 绿光、近红外 | 水体识别 |
-| MNDWI | Modified NDWI | (Green-SWIR)/(Green+SWIR) | 绿光、短波红外 | 水体提取，抑制建筑物 |
-| NDSI | Normalized Difference Snow Index | (Green-SWIR)/(Green+SWIR) | 绿光、短波红外 | 积雪识别 |
-| NDBI | Normalized Difference Built-up Index | (SWIR-NIR)/(SWIR+NIR) | 近红外、短波红外 | 建筑用地提取 |
-| BSI | Bare Soil Index | (SWIR+Red-NIR-Blue)/(SWIR+Red+NIR+Blue) | 全波段 | 裸土识别 |
-| ARVI | Atmospherically Resistant VI | (NIR-2×Red+Blue)/(NIR+2×Red-Blue) | 蓝光、红光、近红外 | 抗大气影响的植被指数 |
-| GNDVI | Green NDVI | (NIR-Green)/(NIR+Green) | 绿光、近红外 | 叶绿素含量 |
+| 指数名称 | 英文全称                               | 公式                                    | 波段要求           | 主要用途                           |
+| -------- | -------------------------------------- | --------------------------------------- | ------------------ | ---------------------------------- |
+| NDVI     | Normalized Difference Vegetation Index | (NIR-Red)/(NIR+Red)                     | 红光、近红外       | 植被覆盖度、生长状况               |
+| EVI      | Enhanced Vegetation Index              | 2.5×(NIR-Red)/(NIR+6×Red-7.5×Blue+1)    | 蓝光、红光、近红外 | 改进的植被指数，减少土壤和大气影响 |
+| SAVI     | Soil Adjusted Vegetation Index         | 1.5×(NIR-Red)/(NIR+Red+0.5)             | 红光、近红外       | 稀疏植被，考虑土壤背景             |
+| NDWI     | Normalized Difference Water Index      | (Green-NIR)/(Green+NIR)                 | 绿光、近红外       | 水体识别                           |
+| MNDWI    | Modified NDWI                          | (Green-SWIR)/(Green+SWIR)               | 绿光、短波红外     | 水体提取，抑制建筑物               |
+| NDSI     | Normalized Difference Snow Index       | (Green-SWIR)/(Green+SWIR)               | 绿光、短波红外     | 积雪识别                           |
+| NDBI     | Normalized Difference Built-up Index   | (SWIR-NIR)/(SWIR+NIR)                   | 近红外、短波红外   | 建筑用地提取                       |
+| BSI      | Bare Soil Index                        | (SWIR+Red-NIR-Blue)/(SWIR+Red+NIR+Blue) | 全波段             | 裸土识别                           |
+| ARVI     | Atmospherically Resistant VI           | (NIR-2×Red+Blue)/(NIR+2×Red-Blue)       | 蓝光、红光、近红外 | 抗大气影响的植被指数               |
+| GNDVI    | Green NDVI                             | (NIR-Green)/(NIR+Green)                 | 绿光、近红外       | 叶绿素含量                         |
 
 ### C. 数据格式完全指南
 
 #### C.1 栅格格式
 
-| 格式 | 扩展名 | 读取 | 写入 | 特点 | 最佳用途 |
-|------|--------|------|------|------|---------|
-| ENVI | .dat, .img, .hdr | ✅ | ✅ | ENVI标准格式，支持所有数据类型 | 内部处理 |
-| GeoTIFF | .tif, .tiff | ✅ | ✅ | 通用地理数据格式，广泛兼容 | 数据交换 |
-| HDF-EOS | .hdf | ✅ | ✅ | NASA标准格式，层次化结构 | 多维数据 |
-| NetCDF | .nc | ✅ | ✅ | 气象海洋标准格式 | 时序数据 |
-| NITF | .ntf, .nitf | ✅ | ✅ | 军事标准格式 | 国防应用 |
-| JPEG2000 | .jp2 | ✅ | ✅ | 小波压缩，高压缩比 | 大数据存储 |
-| PNG | .png | ✅ | ✅ | 无损压缩，8/16位 | 快速可视化 |
-| JPEG | .jpg, .jpeg | ✅ | ✅ | 有损压缩 | 真彩色预览 |
+| 格式     | 扩展名           | 读取 | 写入 | 特点                           | 最佳用途   |
+| -------- | ---------------- | ---- | ---- | ------------------------------ | ---------- |
+| ENVI     | .dat, .img, .hdr | ✅    | ✅    | ENVI标准格式，支持所有数据类型 | 内部处理   |
+| GeoTIFF  | .tif, .tiff      | ✅    | ✅    | 通用地理数据格式，广泛兼容     | 数据交换   |
+| HDF-EOS  | .hdf             | ✅    | ✅    | NASA标准格式，层次化结构       | 多维数据   |
+| NetCDF   | .nc              | ✅    | ✅    | 气象海洋标准格式               | 时序数据   |
+| NITF     | .ntf, .nitf      | ✅    | ✅    | 军事标准格式                   | 国防应用   |
+| JPEG2000 | .jp2             | ✅    | ✅    | 小波压缩，高压缩比             | 大数据存储 |
+| PNG      | .png             | ✅    | ✅    | 无损压缩，8/16位               | 快速可视化 |
+| JPEG     | .jpg, .jpeg      | ✅    | ✅    | 有损压缩                       | 真彩色预览 |
 
 #### C.2 矢量格式
 
-| 格式 | 扩展名 | 特点 |
-|------|--------|------|
-| Shapefile | .shp | GIS标准格式 |
-| GeoJSON | .geojson, .json | 轻量级，Web友好 |
-| KML/KMZ | .kml, .kmz | Google Earth |
-| GeoPackage | .gpkg | SQLite数据库 |
-| ENVI ROI | .xml | ENVI感兴趣区域 |
+| 格式       | 扩展名          | 特点            |
+| ---------- | --------------- | --------------- |
+| Shapefile  | .shp            | GIS标准格式     |
+| GeoJSON    | .geojson, .json | 轻量级，Web友好 |
+| KML/KMZ    | .kml, .kmz      | Google Earth    |
+| GeoPackage | .gpkg           | SQLite数据库    |
+| ENVI ROI   | .xml            | ENVI感兴趣区域  |
 
 #### C.3 点云格式
 
-| 格式 | 扩展名 | 特点 |
-|------|--------|------|
-| LAS | .las | 标准LiDAR格式 |
-| LAZ | .laz | 压缩的LAS |
-| ASCII | .txt, .xyz | 文本格式 |
+| 格式  | 扩展名     | 特点          |
+| ----- | ---------- | ------------- |
+| LAS   | .las       | 标准LiDAR格式 |
+| LAZ   | .laz       | 压缩的LAS     |
+| ASCII | .txt, .xyz | 文本格式      |
 
 ### D. 常见问题全集
 
 #### D.1 数据访问
 
 **Q: 如何处理非常大的影像？**
+
 ```idl
 ; 使用瓦片迭代器
 iter = ENVIRasterIterator(raster, TILE_SIZE=[256,256])
@@ -28653,6 +28691,7 @@ endforeach
 ```
 
 **Q: 如何读取特定波段？**
+
 ```idl
 ; 方法1：打开时指定
 raster = e.OpenRaster('file.dat', BANDS=[2,3,4])
@@ -28662,6 +28701,7 @@ subset = ENVISubsetRaster(raster, BANDS=[2,3,4])
 ```
 
 **Q: 如何设置空间子集？**
+
 ```idl
 ; 按行列范围
 subset = ENVISubsetRaster(raster, SUB_RECT=[100,100,500,500])
@@ -28674,6 +28714,7 @@ subset = ENVIGeographicSubsetRaster(raster, $
 #### D.2 任务执行
 
 **Q: 如何查看任务的所有参数？**
+
 ```idl
 task = ENVITask('TaskName')
 params = task.ParameterNames()
@@ -28681,6 +28722,7 @@ print, params
 ```
 
 **Q: 如何保存中间结果？**
+
 ```idl
 ; 方法1：指定输出文件
 task.OUTPUT_RASTER_URI = 'output.dat'
@@ -28692,6 +28734,7 @@ task.OUTPUT_RASTER.Save('output.dat')
 ```
 
 **Q: 如何处理任务错误？**
+
 ```idl
 task = ENVITask('TaskName')
 task.INPUT_RASTER = raster
@@ -28708,12 +28751,14 @@ catch, /cancel
 #### D.3 性能优化
 
 **Q: 如何加快处理速度？**
+
 - 使用虚拟栅格延迟计算
 - 设置合适的瓦片大小
 - 使用多线程并行处理
 - 减少中间文件写入
 
 **Q: 如何减少内存占用？**
+
 ```idl
 ; 使用迭代器逐块处理
 ; 及时关闭不用的栅格对象
@@ -28827,34 +28872,48 @@ end
 ### F. 参考资源
 
 #### F.1 官方文档
+
 - **ENVI帮助**: https://www.harrisgeospatial.com/docs/using_envi_Home.html
 - **IDL帮助**: https://www.harrisgeospatial.com/docs/using_idl_home.html
 - **API参考**: https://www.harrisgeospatial.com/docs/enviapireference.html
 - **教程**: https://www.harrisgeospatial.com/docs/tutorials.html
 
 #### F.2 学习资源
+
 - ENVI在线培训
 - YouTube官方频道
 - 用户论坛
 - 技术博客
 
 #### F.3 技术支持
+
 - **邮箱**: support@harrisgeospatial.com
 - **论坛**: https://www.harrisgeospatial.com/Support/Forums
 - **电话**: 查看官网联系信息
 
 ### G. 版本信息
 
-- **文档版本**: 5.0 终极完整版 - ENVI/IDL全API参考
+- **文档版本**: 5.1 终极完整版 - ENVI/IDL全API参考 + 自定义工具集
 - **ENVI版本**: 5.6
 - **IDL版本**: 8.9
 - **ENVI API版本**: 4.2+
-- **生成日期**: 2025年11月17日
-- **处理方式**: 10次深度遍历 + 完整API提取
-- **总页数**: 28,500+行
-- **总内容**: 1227个函数/方法 + 1200+代码示例
+- **生成日期**: 2025年12月
+- **处理方式**: 10次深度遍历 + 完整API提取 + 工具集整理
+- **总页数**: 29,600+行
+- **总内容**: 1227个函数/方法 + 5个完整工具集 + 1200+代码示例
+
+**v5.1更新内容** (2025-12):
+
+  * 🎯 新增自定义任务与工具集章节（5个完整工具集）
+  * 🛠️ 栅格轮廓提取工具（test_1201footprint_envitask）
+  * 🛠️ 植被覆盖度计算任务（test_1202VFCTask）
+  * 🛠️ Landsat GeoTIFF空间参考读取（test_1204_geotiff_spatial_ref）
+  * 🛠️ Landsat L2水体提取批量处理（test_1205_WaterExtractionBatch）
+  * 🛠️ Landsat空间参考与图像镶嵌（test_1206_LandsatSpatialRefMosaic）
+  * 📈 从API学习到实际应用的完整工具链
 
 **v5.0更新内容** (2025-11-17):
+
   * 🎯 新增ENVI面向对象开发API 7大章节（180个方法）
   * 🔥 **核心突破**: ENVIRasterIterator瓦片迭代器（处理超大数据）
   * 🔥 ENVIRaster对象完整方法（GetData, SetData, CreateTileIterator等）
@@ -28866,12 +28925,14 @@ end
   * 📈 从Task使用者到ENVI开发者的完整进阶
 
 **v4.0内容** (2025-11-17):
+
   * ✨ 新增IDL基础编程6大章节（364个函数）
   * ✨ 完整覆盖IDL数学、数组、I/O、绘图、控制、系统函数
   * ✨ 1000+实用代码示例
   * ✨ 从入门到精通的完整学习路径
 
 **v3.0内容** (2025-10-31):
+
   * 深度提取HTML文档
   * 完善ENVI任务中文描述
   * 添加高级示例
@@ -28886,6 +28947,7 @@ end
 ---
 
 **📌 使用建议**:
+
 1. **快速查找**: 通过目录快速定位功能类别
 2. **函数搜索**: 使用Ctrl+F搜索具体函数名
 3. **示例学习**: 每个函数都有可运行的代码示例
@@ -28898,6 +28960,7 @@ end
 **🎯 快速导航**:
 
 **IDL基础编程**:
+
 - IDL编程新手 → [十三、IDL数学与统计](#十三idl数学与统计)
 - 数组处理 → [十四、IDL数组操作](#十四idl数组操作)
 - 文件I/O → [十五、IDL数据输入输出](#十五idl数据输入输出)
@@ -28906,6 +28969,7 @@ end
 - 系统函数 → [十八、IDL系统函数](#十八idl系统函数)
 
 **ENVI任务处理**:
+
 - 影像预处理 → [一、影像预处理](#一影像预处理)
 - 影像增强 → [二、影像增强](#二影像增强)
 - 影像分类 → [五、影像分类](#五影像分类)
@@ -28913,6 +28977,7 @@ end
 - 几何处理 → [八、几何处理](#八几何处理)
 
 **ENVI二次开发** ⭐:
+
 - 🔥 处理超大数据 → [十九、ENVI核心对象API](#十九envi核心对象api) ← ENVIRasterIterator
 - 🔥 可视化开发 → [二十、ENVI可视化API](#二十envi可视化api)
 - 🔥 坐标转换 → [二十一、ENVI空间参考API](#二十一envi空间参考api)
@@ -28921,9 +28986,710 @@ end
 - 🔥 工作流设计 → [二十四、ENVI工作流API](#二十四envi工作流api)
 - 🔥 服务器集成 → [二十五、ENVI服务器与通信API](#二十五envi服务器与通信api)
 
-**🔖 最后更新**: 2025年11月17日
+**自定义任务与工具集** ⭐:
+
+- 🛠️ 实用工具集 → [二十六、自定义任务与工具集](#二十六自定义任务与工具集) ← 5个完整工具集
+
+**🔖 最后更新**: 2025年12月
 
 **📈 文档演进历史**:
+
+- v5.1 (2025-12): 🎯 新增自定义任务与工具集章节（5个完整工具集）
+- v5.0 (2025-11-17): 🎯 终极完整版！新增ENVI面向对象API 7大章节（180+个方法）
+- v4.0 (2025-11-17): 新增IDL基础编程364个函数，达到1047个函数
+- v3.0 (2025-10-31): 深度增强版，683个ENVI函数
+- v2.0 (2025-09-15): 初始完整版
+- v1.0 (2025-08-01): 首个发布版
+
+
+---
+
+## 二十六、自定义任务与工具集
+
+**简介**: 本部分收录了基于ENVI/IDL开发的自定义任务和实用工具集，涵盖栅格处理、空间参考管理、批量处理等实际应用场景。
+
+**工具数量**: 5个完整工具集
+
+**主要功能**: 栅格轮廓提取、植被覆盖度计算、空间参考读取、水体提取、图像镶嵌与空间参考管理
+
+---
+
+### 📑 工具集索引
+
+#### 1. test_1201footprint_envitask - 栅格轮廓提取工具
+
+- **功能**: 从栅格影像中自动提取有效数据区域的轮廓，输出为Shapefile矢量文件
+- **核心特点**: 自动检测背景值、智能推荐、一键处理
+- **适用场景**: 高分一号（GF-1）等卫星影像数据覆盖范围提取
+- **详细内容**: [见下方](#test_1201footprint_envitask-栅格轮廓提取工具)
+
+#### 2. test_1202VFCTask - 植被覆盖度计算任务
+
+- **功能**: 基于NDVI的植被覆盖度（VFC）计算，支持单文件和批量处理
+- **核心特点**: ENVI Task框架封装、图形界面和API两种调用方式
+- **适用场景**: 植被覆盖度分析、生态环境监测
+- **详细内容**: [见下方](#test_1202vfctask-植被覆盖度计算任务)
+
+#### 3. test_1204_geotiff_spatial_ref - Landsat GeoTIFF空间参考读取
+
+- **功能**: 从Landsat GeoTIFF文件中读取空间参考信息的成功方法
+- **核心特点**: 两种可靠方法、不依赖MTL文件解析
+- **适用场景**: Landsat L2数据处理、空间参考信息补充
+- **详细内容**: [见下方](#test_1204_geotiff_spatial_ref-landsat-geotiff空间参考读取)
+
+#### 4. test_1205_WaterExtractionBatch - Landsat L2水体提取批量处理
+
+- **功能**: 批量处理Landsat L2数据，自动提取水体信息
+- **核心特点**: 自动空间参考处理、MNDWI水体提取、栅格和矢量双输出
+- **适用场景**: 水体监测、水资源管理、洪水评估
+- **详细内容**: [见下方](#test_1205_waterextractionbatch-landsat-l2水体提取批量处理)
+
+#### 5. test_1206_LandsatSpatialRefMosaic - Landsat空间参考与图像镶嵌
+
+- **功能**: Landsat数据空间参考坐标系添加与图像镶嵌完整解决方案
+- **核心特点**: 从GeoTIFF读取空间参考、ENVI格式保存、自动重投影镶嵌
+- **适用场景**: Landsat数据预处理、多景影像镶嵌、空间参考管理
+- **详细内容**: [见下方](#test_1206_landsatspatialrefmosaic-landsat空间参考与图像镶嵌)
+
+---
+
+### test_1201footprint_envitask - 栅格轮廓提取工具
+
+#### 项目概述
+
+本项目实现了一个自定义的ENVI任务，用于从栅格影像中自动提取有效数据区域的轮廓，并输出为Shapefile矢量文件。该工具特别适用于处理高分一号（GF-1）等卫星影像数据，能够自动识别背景值并生成数据覆盖范围的矢量边界。
+
+**核心特点**：
+
+- ✅ **一键处理**：无需手动检查背景值，程序自动执行完整流程
+- ✅ **智能检测**：自动检测NoData值并推荐合适的背景值
+- ✅ **详细反馈**：显示每个处理步骤的详细信息和时间统计
+- ✅ **稳定可靠**：完善的错误处理和资源管理机制
+
+#### 文件夹结构
+
+```
+test_1201footprint_envitask/
+├── test_1201footprint_envitask.pro      # 核心处理程序（ENVI任务主程序）
+│                                         # 已整合背景值检查、轮廓提取、矢量生成功能
+├── test_1201footprint_envitask.task     # 任务定义文件（JSON格式）
+│                                         # 定义任务参数和UI界面
+├── test_1201footprint_envitask_ui.pro   # 图形界面程序
+│                                         # 提供可视化的参数设置界面
+├── README.txt                           # 使用说明文档（文本格式）
+└── 1201_栅格轮廓提取工具使用说明.md     # 详细说明文档
+```
+
+#### 核心功能
+
+1. **自动轮廓提取**
+   - 从多波段栅格影像中提取有效数据区域的轮廓
+   - 自动识别并排除背景值（NoData值或指定背景值）
+   - 生成包含数据覆盖范围的矢量边界文件（Shapefile格式）
+
+2. **智能背景值检测（已整合到主程序）**
+   - **自动检测**：自动检测栅格元数据中的NoData值
+   - **统计分析**：自动分析各波段统计信息（采样前1000x1000像素）
+   - **智能推荐**：自动分析最常见值和边界最常见值，推荐合适的背景值
+   - **默认自动**：Background Value参数留空时，自动使用NoData值或推荐值
+   - **手动覆盖**：支持手动指定背景值（适用于特殊情况）
+
+3. **多波段处理**
+   - 自动选择最后一个波段进行处理（通常包含更多信息）
+   - 支持多波段栅格数据（如GF-1的4波段多光谱数据）
+   - 自动验证数据有效性
+
+#### 使用方法
+
+**方法一：使用图形界面（推荐）**
+
+```idl
+.compile test_1201footprint_envitask_ui
+test_1201footprint_envitask_ui
+```
+
+然后在弹出的对话框中：
+
+1. Input Raster：选择输入栅格文件
+2. Background Value：留空（推荐，自动检测）
+3. Output Vector URI：选择输出矢量文件路径
+4. 点击确定开始处理
+
+**方法二：直接调用任务程序**
+
+```idl
+.compile test_1201footprint_envitask
+
+; 打开输入栅格
+raster = e.OpenRaster('input.tif')
+
+; 创建任务
+task = ENVITask('test_1201footprint_envitask')
+task.INPUT_RASTER = raster
+task.BACKGROUND_VALUE = 0  ; 可选，留空则自动检测
+task.OUTPUT_VECTOR_URI = 'output.shp'
+
+; 执行任务
+task.Execute
+```
+
+#### 技术实现
+
+- **基础框架**: ENVI Task Framework (ENVITaskFromProcedure)
+- **核心算法**: 使用ENVI的栅格转矢量功能（ENVIRasterToVector）
+- **背景值处理**: 自动检测NoData值，支持多波段统计
+- **错误处理**: 完善的CATCH错误处理机制
+
+---
+
+### test_1202VFCTask - 植被覆盖度计算任务
+
+#### 项目概述
+
+本任务实现了基于NDVI（归一化植被指数）的植被覆盖度计算功能，通过ENVI Task框架封装为可复用的处理工具。支持单个文件处理和批量处理，提供图形界面和API两种调用方式。
+
+**核心算法**: VFC（Vegetation Fraction Coverage）植被覆盖度计算，基于NDVI值通过线性插值方法将植被覆盖度映射到0-1范围内。
+
+**技术架构**:
+
+- **基础框架**: ENVI Task Framework (ENVITaskFromProcedure)
+- **编程语言**: IDL (Interactive Data Language)
+- **开发环境**: ENVI 5.x
+- **任务模式**: 基于过程的ENVI任务（Procedure-based Task）
+
+#### 文件夹结构
+
+```
+test_1202VFCTask/
+├── test_1202VFCTask.pro              # 核心算法过程文件
+├── test_1202VFCTask.task              # Task定义文件（JSON格式）
+├── test_1202VFCTask.style             # UI样式配置文件（JSON格式）
+├── test_test_1202VFCTask_API.pro      # API调用测试脚本
+├── test_test_1202VFCTask_UI.pro       # UI界面测试脚本
+├── test1202_VFCTask_UI_Batch.pro      # 批量处理脚本（结合UI）
+├── visualize_VFC_result.pro           # VFC结果可视化脚本
+├── README_使用说明.txt                # 使用说明文档
+├── 1202_VFC植被覆盖度计算任务技术文档.md  # 详细技术文档
+└── VFC结果解读说明.txt                # 结果解读说明
+```
+
+#### 核心算法详解
+
+**VFC计算公式**:
+
+```
+VFC = (NDVI - NDVI_soil) / (NDVI_veg - NDVI_soil)
+```
+
+其中：
+
+- `NDVI_soil`: 裸土NDVI值（默认-0.1）
+- `NDVI_veg`: 纯植被NDVI值（默认0.6）
+- `VFC`: 植被覆盖度（0-1范围，映射到0-100）
+
+**处理流程**:
+
+1. 计算NDVI指数
+2. 线性插值计算VFC
+3. 将VFC值映射到0-100范围
+4. 输出植被覆盖度栅格
+
+#### 使用方法
+
+**编译和运行**:
+
+```idl
+; 编译核心过程文件
+.compile 'test_1202VFCTask.pro'
+
+; 运行UI界面版本
+test_test_1202VFCTask_UI
+
+; 或运行API版本（直接使用默认路径）
+test_test_1202VFCTask_API
+
+; 或运行批量处理版本
+test1202_VFCTask_UI_Batch
+```
+
+**API调用示例**:
+
+```idl
+; 打开输入栅格
+raster = e.OpenRaster('input.tif')
+
+; 创建任务
+task = ENVITask('test_1202VFCTask')
+task.INPUT_RASTER = raster
+task.NDVI_SOIL = -0.1    ; 裸土NDVI值
+task.NDVI_VEG = 0.6      ; 纯植被NDVI值
+task.OUTPUT_RASTER_URI = 'output_vfc.dat'
+
+; 执行任务
+task.Execute
+```
+
+#### 输出格式说明
+
+- **数据范围**: 0-100（植被覆盖度百分比）
+- **数据类型**: 浮点型
+- **无效值**: -999（NoData区域）
+- **颜色映射**: 建议使用绿色渐变（低值=浅绿，高值=深绿）
+
+---
+
+### test_1204_geotiff_spatial_ref - Landsat GeoTIFF空间参考读取
+
+#### 项目概述
+
+本工具集包含从Landsat GeoTIFF文件中读取空间参考信息的成功方法和所有尝试过程的详细记录。解决了Landsat L2数据处理中空间参考信息缺失的问题。
+
+**核心原理**: 直接从GeoTIFF文件本身读取空间参考信息，而不是从MTL（元数据）文件中解析。
+
+#### 文件夹结构
+
+```
+test_1204_geotiff_spatial_ref/
+├── 1204_read_geotiff_spatial_ref.pro      # 演示两种成功方法的程序
+├── 1204_create_map_info_from_geotiff.pro  # 从GeoTIFF创建MAP_INFO的函数
+├── 1204_methods_description.md            # 详细记录所有尝试的方法
+└── README.md                               # 使用说明文档
+```
+
+#### 两种成功方法
+
+**方法1: 使用 `READ_TIFF` + `GEOTIFF` 参数**
+
+```idl
+img = READ_TIFF(geotiffFile, GEOTIFF=GeoKeys, SUB_RECT=[0, 0, 1, 1])
+IF N_ELEMENTS(GeoKeys) GT 0 THEN BEGIN
+  ; 提取像元大小
+  pixelScale = GeoKeys.MODELPIXELSCALETAG
+  pixelSize = pixelScale[0]
+  
+  ; 提取左上角坐标
+  tiePoint = GeoKeys.MODELTIEPOINTTAG
+  ulX = tiePoint[3]
+  ulY = tiePoint[4]
+  
+  ; 提取UTM Zone（从字符串解析）
+  citation = GeoKeys.GTCITATIONGEOKEY
+  ; 解析UTM Zone...
+ENDIF
+```
+
+**方法2: 使用 `ENVI_OPEN_DATA_FILE` + `/TIFF` 关键字（优先方法）**
+
+```idl
+ENVI_OPEN_DATA_FILE, geotiffFile, /TIFF, R_FID=fid
+IF fid NE -1 THEN BEGIN
+  ; 获取投影信息
+  ENVI_FILE_QUERY, fid, coord_sys=coordSys
+  ; 获取像元大小和坐标
+  ENVI_GET_MAP_INFO, fid, map_info=mapInfo
+  ; 从mapInfo中提取信息
+  pixelSize = mapInfo.PS[0]
+  ulX = mapInfo.MC[2]  ; 左上角X坐标
+  ulY = mapInfo.MC[3]  ; 左上角Y坐标
+  utmZone = mapInfo.ZONE
+  datum = mapInfo.DATUM
+ENDIF
+```
+
+#### 为什么这两种方法能够成功？
+
+**核心原因**: 这两种方法直接从GeoTIFF文件本身读取空间参考信息，而不是从MTL文件中解析。
+
+**技术原理**:
+
+1. **GeoTIFF格式特性**: GeoTIFF是TIFF格式的扩展，在文件头中嵌入了地理参考信息
+2. **MTL文件解析的问题**: 在用户的ENVI/IDL环境中，直接解析MTL文件存在编码问题、API不支持等问题
+3. **直接读取GeoTIFF的优势**: GeoTIFF文件本身包含完整的地理参考信息，IDL和ENVI都能正确识别
+
+#### 使用方法
+
+**测试读取空间参考信息**:
+
+```idl
+; 编译并运行测试程序
+.compile -v '1204_read_geotiff_spatial_ref.pro'
+read_geotiff_spatial_ref
+```
+
+**在代码中使用**:
+
+```idl
+; 编译函数
+.compile -v '1204_create_map_info_from_geotiff.pro'
+
+; 从GeoTIFF文件创建MAP_INFO
+mapInfo = create_map_info_from_geotiff('path/to/SR_B3.TIF')
+
+; 检查是否成功
+IF mapInfo NE !NULL THEN BEGIN
+  PRINT, '成功创建MAP_INFO'
+  ; 使用mapInfo设置到栅格对象
+ENDIF ELSE BEGIN
+  PRINT, '创建MAP_INFO失败'
+ENDELSE
+```
+
+#### 所有尝试的方法及结果
+
+详细记录了7种尝试方法：
+
+- ❌ 方法1：从MTL XML文件解析坐标（失败）
+- ❌ 方法2：从MTL TXT文件解析坐标（失败）
+- ❌ 方法3：使用IDLffXMLDOMDocument解析XML（失败）
+- ❌ 方法4：使用ENVI_OPEN_DATA_FILE + /LANDSAT_METADATA（失败）
+- ❌ 方法5：直接打开SR_B3/SR_B4 TIF文件检查SPATIALREF（失败）
+- ✅ 方法6：使用READ_TIFF + GEOTIFF参数（成功）
+- ✅ 方法7：使用ENVI_OPEN_DATA_FILE + /TIFF关键字（成功）
+
+详细失败原因和成功方法的技术细节请参考`1204_methods_description.md`。
+
+---
+
+### test_1205_WaterExtractionBatch - Landsat L2水体提取批量处理
+
+#### 项目概述
+
+本工具用于批量处理Landsat L2级别数据，自动提取水体信息。支持自动空间参考处理、MNDWI水体提取、栅格和矢量双输出。
+
+**主要功能**:
+
+1. **批量处理**: 自动遍历指定文件夹，查找所有Landsat L2 MTL文件（XML或TXT格式）
+2. **自动空间参考处理**: 如果数据缺少空间参考信息，自动从GeoTIFF文件（SR_B3或SR_B4）读取并设置
+3. **水体提取**: 使用MNDWI（改进归一化差异水体指数）进行水体提取
+4. **结果输出**: 同时输出分类栅格和矢量Shapefile
+
+#### 文件夹结构
+
+```
+test_1205_WaterExtractionBatch/
+├── batch_water_extraction.pro          # 命令行版本（使用默认参数）
+├── batch_water_extraction_UI.pro       # UI界面版本（推荐）
+├── spatial_ref_utils.pro               # 空间参考处理工具函数
+├── test_ENVIWaterExtractionTask.pro    # 水体提取核心任务
+├── README.md                            # 使用说明文档
+└── 使用说明.txt                        # 详细使用说明
+```
+
+#### 使用方法
+
+**UI界面版本（推荐）**:
+
+```idl
+batch_water_extraction_UI
+```
+
+**命令行版本**:
+
+```idl
+batch_water_extraction
+```
+
+#### 操作流程
+
+1. **选择输入文件夹**: 选择包含多个Landsat L2数据文件夹的父目录
+2. **选择输出目录**: 选择结果保存位置
+3. **选择输出格式**: TIFF格式(.tif)或ENVI格式(.dat)
+4. **设置参数（UI界面）**: 
+   - Apply QUAC: 是否应用QUAC大气校正
+   - Threshold Value: MNDWI阈值
+   - Smooth Size: 分类平滑核大小
+   - Minimum Area: 最小水体面积（km²）
+
+#### 水体提取流程
+
+1. **计算MNDWI**: 使用改进归一化差异水体指数
+2. **阈值分割**: 根据阈值将MNDWI影像分为水体和非水体
+3. **分类平滑**: 使用形态学操作去除噪声
+4. **分类聚合**: 去除小于最小面积的水体斑块
+5. **栅格转矢量**: 将分类结果转换为矢量格式
+
+#### 输出文件
+
+每个处理的数据会生成两个输出文件：
+
+1. **栅格文件**: `*_Water.tif` 或 `*_Water.dat` - 分类栅格，包含背景和水体两类
+2. **矢量文件**: `*_Water.shp` - Shapefile格式的水体边界，仅包含水体类别
+
+#### 技术说明
+
+**空间参考处理**:
+
+- 优先检查raster是否已有空间参考信息
+- 如果缺少，从同目录下的SR_B3或SR_B4 GeoTIFF文件读取
+- 使用`create_map_info_from_geotiff`函数创建MAP_INFO结构
+- 通过临时文件方式为raster设置空间参考
+
+**依赖文件**:
+
+- `test_ENVIWaterExtractionTask.pro`: 水体提取核心任务
+- `spatial_ref_utils.pro`: 空间参考处理工具函数
+
+---
+
+### test_1206_LandsatSpatialRefMosaic - Landsat空间参考与图像镶嵌
+
+#### 项目概述
+
+本工具集提供了Landsat数据空间参考坐标系添加与图像镶嵌的完整解决方案。解决了Landsat L2数据处理中空间参考信息缺失和图像镶嵌的问题。
+
+**核心原则**: 所有输出文件必须使用ENVI格式(.dat)保存，以确保空间参考坐标系信息被正确保留。
+
+#### 文件夹结构
+
+```
+test_1206_LandsatSpatialRefMosaic/
+├── 1206_batch_soil_EC.pro              # 批量计算土壤电导率EC，确保空间参考保存
+├── 1206_mosaic_rasters.pro              # 图像镶嵌工具，支持不同投影系统
+├── 1206_read_geotiff_spatial_ref.pro    # 从GeoTIFF文件读取空间参考信息的工具
+├── 1206_Landsat空间参考与镶嵌_说明文档.md  # 完整技术文档
+└── 1206_README_使用说明.txt             # 使用说明文档
+```
+
+#### 核心功能
+
+1. **空间参考坐标系添加**
+   - 从GeoTIFF文件（SR_B3/SR_B4）直接读取空间参考信息
+   - 两种可靠方法：`ENVI_OPEN_DATA_FILE + /TIFF`（优先）和`READ_TIFF + GEOTIFF`（备用）
+   - 不依赖MTL文件解析，避免编码问题
+
+2. **ENVI格式保存（必需）**
+   - TIFF格式在ENVI中可能丢失空间参考信息
+   - 使用临时文件 + ENVI_SETUP_HEAD方法确保空间参考写入
+   - 支持4种导出方法的容错流程
+
+3. **图像镶嵌**
+   - 自动检测和处理不同投影系统（自动重投影）
+   - 自动补充缺失的空间参考信息
+   - 统一data ignore value，避免黑边问题
+   - 支持多文件批量镶嵌
+
+#### Landsat数据空间参考坐标系添加方法
+
+**问题背景**: Landsat L2数据从MTL文件打开的Surface Reflectance数据可能缺少空间参考信息。传统的MTL XML/TXT解析方法在某些环境下可能失败。
+
+**解决方案**: 直接从Landsat L2数据包中的GeoTIFF波段文件（`*_SR_B3.TIF`或`*_SR_B4.TIF`）读取空间参考信息。
+
+**方法1: 使用 `ENVI_OPEN_DATA_FILE` + `/TIFF` 关键字（优先方法）**
+
+```idl
+ENVI_OPEN_DATA_FILE, geotiffFile, /TIFF, R_FID=fid
+IF fid NE -1 THEN BEGIN
+  ; 获取投影信息
+  ENVI_FILE_QUERY, fid, coord_sys=coordSys
+  ; 获取像元大小和坐标
+  ENVI_GET_MAP_INFO, fid, map_info=mapInfo
+  ; 从mapInfo中提取信息
+  pixelSize = mapInfo.PS[0]
+  ulX = mapInfo.MC[2]  ; 左上角X坐标
+  ulY = mapInfo.MC[3]  ; 左上角Y坐标
+  utmZone = mapInfo.ZONE
+  datum = mapInfo.DATUM
+ENDIF
+```
+
+**方法2: 使用 `READ_TIFF` + `GEOTIFF` 参数（备用方法）**
+
+```idl
+img = READ_TIFF(geotiffFile, GEOTIFF=GeoKeys, SUB_RECT=[0, 0, 1, 1])
+IF N_ELEMENTS(GeoKeys) GT 0 THEN BEGIN
+  ; 提取像元大小
+  pixelScale = GeoKeys.MODELPIXELSCALETAG
+  pixelSize = pixelScale[0]
+  
+  ; 提取左上角坐标
+  tiePoint = GeoKeys.MODELTIEPOINTTAG
+  ulX = tiePoint[3]
+  ulY = tiePoint[4]
+  
+  ; 提取UTM Zone（从字符串解析）
+  citation = GeoKeys.GTCITATIONGEOKEY
+  ; 解析UTM Zone...
+ENDIF
+```
+
+**创建MAP_INFO结构**:
+
+```idl
+mapInfo = ENVI_MAP_INFO_CREATE( $
+  /UTM, $
+  ZONE=utmZone, $
+  /NORTH, $
+  DATUM='WGS-84', $
+  MC=[0.0, 0.0, ulX, ulY], $  ; [x, y, mapX, mapY]
+  PS=[pixelSize, pixelSize] $  ; 像元大小
+)
+```
+
+#### ENVI格式(.dat)保存的必要性
+
+**为什么必须使用ENVI格式？**
+
+- **TIFF格式的问题**: ENVI的`raster.Export`方法在导出TIFF格式时，无法可靠地保存空间参考信息
+- **ENVI格式的优势**: ENVI格式(.dat + .hdr)可以完整保存所有空间参考信息，使用`ENVI_SETUP_HEAD`函数可以直接写入MAP_INFO到文件头
+
+**空间参考信息丢失的后果**:
+
+- 影像无法正确显示在地理坐标系中
+- 无法进行地理配准
+- 无法与其他地理数据进行叠加分析
+- 镶嵌操作会失败（提示"No standard map projection"）
+
+#### 空间参考信息保存的正确方法
+
+**核心策略**: 临时文件 + ENVI_SETUP_HEAD
+
+**完整流程**:
+
+```idl
+; 步骤1: 导出到临时ENVI文件
+tempFile = e.GetTemporaryFilename('dat')
+ec_raster.Export, tempFile, 'ENVI'
+WAIT, 0.5
+
+; 步骤2: 使用ENVI_SETUP_HEAD设置空间参考
+ENVI_OPEN_FILE, tempFile, r_fid=fid
+IF fid GE 0 THEN BEGIN
+  ENVI_FILE_QUERY, fid, ns=ns, nl=nl, nb=nb, data_type=dt, interleave=interleave
+  ENVI_SETUP_HEAD, $
+    FNAME=tempFile, $
+    NS=ns, NL=nl, NB=nb, DATA_TYPE=dt, INTERLEAVE=interleave, $
+    MAP_INFO=exportMapInfo, /WRITE, /OPEN
+  ENVI_FILE_MNG, id=fid, /REMOVE
+ENDIF
+
+; 步骤3: 从临时文件导出到最终文件
+tempRaster = e.OpenRaster(tempFile)
+tempRaster.Export, outfile, 'ENVI'
+
+; 步骤4: 再次使用ENVI_SETUP_HEAD确保空间参考写入
+ENVI_OPEN_FILE, outfile, r_fid=fidFinal
+IF fidFinal GE 0 THEN BEGIN
+  ENVI_FILE_QUERY, fidFinal, ns=nsFinal, nl=nlFinal, nb=nbFinal, $
+    data_type=dtFinal, interleave=interleaveFinal
+  ENVI_SETUP_HEAD, $
+    FNAME=outfile, $
+    NS=nsFinal, NL=nlFinal, NB=nbFinal, DATA_TYPE=dtFinal, $
+    INTERLEAVE=interleaveFinal, $
+    MAP_INFO=exportMapInfo, /WRITE, /OPEN
+  ENVI_FILE_MNG, id=fidFinal, /REMOVE
+ENDIF
+```
+
+**容错方法**: 按顺序尝试4种导出方法，直到成功：
+
+1. 直接Export方法
+2. GetTemporaryFilename方法
+3. RasterExport任务（如果可用）
+4. ExportRasterToENVI任务（备用）
+
+#### 图像镶嵌操作指南
+
+**功能概述**:
+
+- 自动检测和处理不同投影系统（自动重投影到第一个影像的投影系统）
+- 自动补充缺失的空间参考信息（从同目录下的SR_B3或SR_B4文件读取）
+- 统一data ignore value，避免黑边问题
+- 支持多文件批量镶嵌
+
+**输入文件要求**:
+
+- 支持格式: ENVI格式(.dat + .hdr)或TIFF格式(.tif)
+- 空间参考要求: 所有输入文件必须有有效的空间参考信息（程序会自动补充）
+
+**操作步骤**:
+
+1. **选择输入文件**: 选择要镶嵌的影像文件（可多选）
+2. **选择输出目录**: 选择结果保存位置
+3. **自动处理空间参考**: 程序自动检查并补充缺失的空间参考信息
+4. **投影系统检查与重投影**: 如果投影系统不同，自动重投影到第一个文件的投影系统
+5. **统一data ignore value**: 检测并统一所有输入文件的data ignore value（默认0.1）
+6. **执行镶嵌**: 使用`ENVIMosaicRaster`进行镶嵌
+7. **保存结果**: 保存为ENVI格式，并使用ENVI_SETUP_HEAD确保空间参考和data ignore value写入
+
+**输出格式**: 固定为ENVI格式（`.dat` + `.hdr`），确保空间参考信息被完整保存。
+
+**注意事项**:
+
+- 空间参考必须存在: 所有输入文件必须有有效的空间参考信息
+- 投影系统可以不同: 程序会自动重投影，但会增加处理时间
+- data ignore value统一: 程序会自动统一，避免黑边问题
+- 文件大小: 镶嵌后的文件可能很大，确保有足够的磁盘空间
+
+#### 使用方法
+
+**批量计算土壤电导率EC**:
+
+```idl
+; 编译并运行
+.compile '1206_batch_soil_EC.pro'
+1206_batch_soil_EC
+
+; 按照提示操作：
+; 1. 选择Landsat L2 MTL文件（可多选）
+; 2. 选择输出目录（固定使用ENVI格式）
+; 3. 确认计算参数
+; 4. 自动批量处理
+```
+
+**图像镶嵌**:
+
+```idl
+; 编译并运行
+.compile '1206_mosaic_rasters.pro'
+1206_mosaic_rasters
+
+; 按照提示操作：
+; 1. 选择要镶嵌的影像文件（可多选）
+; 2. 选择输出目录和文件名
+; 3. 程序自动处理空间参考和投影系统
+; 4. 执行镶嵌并保存结果
+```
+
+**检查空间参考信息**:
+
+```idl
+; 编译并运行
+.compile '1206_read_geotiff_spatial_ref.pro'
+1206_read_geotiff_spatial_ref
+
+; 选择SR_B3或SR_B4文件，查看空间参考信息
+```
+
+#### 常见问题与解决方案
+
+**Q1: 为什么输出文件缺少空间参考信息？**
+
+- 原因: 使用了TIFF格式导出或没有使用ENVI_SETUP_HEAD写入空间参考信息
+- 解决方案: 确保使用ENVI格式(.dat)导出，并使用临时文件+ENVI_SETUP_HEAD方法
+
+**Q2: 镶嵌时提示"No standard map projection"**
+
+- 原因: 输入文件缺少空间参考信息
+- 解决方案: 确保同目录下有对应的SR_B3或SR_B4文件，程序会自动读取
+
+**Q3: 镶嵌结果有黑边覆盖**
+
+- 原因: data ignore value没有统一
+- 解决方案: 程序会自动统一data ignore value，确保所有输入文件都有正确的设置
+
+**Q4: 如何验证空间参考信息是否正确？**
+
+- 方法1: 使用代码验证（检查SPATIALREF对象）
+- 方法2: 在ENVI中查看文件属性
+- 方法3: 使用1206_read_geotiff_spatial_ref工具检查
+
+---
+
+**🔖 最后更新**: 2025年12月
+
+**📈 文档演进历史**:
+
+- v5.1 (2025-12): 🎯 新增自定义任务与工具集章节（5个完整工具集）
 - v5.0 (2025-11-17): 🎯 终极完整版！新增ENVI面向对象API 7大章节（180+个方法）
 - v4.0 (2025-11-17): 新增IDL基础编程364个函数，达到1047个函数
 - v3.0 (2025-10-31): 深度增强版，683个ENVI函数
