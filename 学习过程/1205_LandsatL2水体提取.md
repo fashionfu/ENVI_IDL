@@ -3,7 +3,7 @@
 ## 功能说明
 
 本工具用于批量处理 Landsat L2 级别数据，自动提取水体信息。
-
+![SG滤波结果](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1203_SG%E6%BB%A4%E6%B3%A2%E7%BB%93%E6%9E%9C%E5%9B%BE.png)
 ### 主要功能
 
 1. **批量处理**: 自动遍历指定文件夹，查找所有 Landsat L2 MTL 文件（XML 或 TXT 格式）
@@ -190,4 +190,5 @@ minArea = 0.05        ; 最小水体面积（km²）
 - **版本**: 1.0
 - **日期**: 2024-12
 - **作者**: Auto
+
 
