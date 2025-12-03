@@ -11,7 +11,7 @@
 ---
 
 ## 概述
-![mndvi水体提取](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1205_mndvi%E6%B0%B4%E4%BD%93%E6%8F%90%E5%8F%96.png)
+![影像镶嵌结果](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1206_%E9%95%B6%E5%B5%8C%E7%BB%93%E6%9E%9C.png)
 本工具集用于处理Landsat Level 2 (L2)数据，主要包括：
 - **1206_batch_soil_EC.pro**: 批量计算土壤电导率EC，并确保输出文件包含正确的空间参考信息
 - **1206_mosaic_rasters.pro**: 图像镶嵌工具，支持不同投影系统的自动重投影
@@ -523,5 +523,6 @@ ENDELSE
 **更新日期**: 2024-12  
 **适用ENVI版本**: ENVI 5.0及以上  
 **适用IDL版本**: IDL 8.0及以上
+
 
 
