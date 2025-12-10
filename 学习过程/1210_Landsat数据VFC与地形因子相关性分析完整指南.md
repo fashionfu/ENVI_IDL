@@ -18,7 +18,7 @@
 
 本工具集用于处理Landsat 8/9 Level 2 (Surface Reflectance)数据，实现植被覆盖度（VFC, Vegetation Fraction Coverage）计算、地形因子提取、相关性分析和多年份批量处理等功能。
 
-![VFC]()
+![VFC](https://github.com/fashionfu/ENVI_IDL/blob/main/%E5%AD%A6%E4%B9%A0%E8%BF%87%E7%A8%8B/1210_VFC.png)
 
 **核心功能**:
 - **VFC计算**：基于NDVI计算植被覆盖度，使用像元二分模型
@@ -1258,5 +1258,6 @@ END
 **适用ENVI版本**: ENVI 5.0及以上  
 **适用IDL版本**: IDL 8.0及以上  
 **适用数据**: Landsat 8/9 Level 2 Surface Reflectance数据
+
 
 
