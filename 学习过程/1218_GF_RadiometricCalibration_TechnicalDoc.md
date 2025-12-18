@@ -391,7 +391,7 @@ calibration scale factor = 1.00000000000000
 
 ### 6.4 根本原因
 
-**2024-12-18 发现**：ENVI 官方在 `resource/filterfuncs/sensor_attributes.json` 中维护了完整的传感器参数，包括 **offset（偏移量）** 参数：
+**发现**：ENVI 官方在 `resource/filterfuncs/sensor_attributes.json` 中维护了完整的传感器参数，包括 **offset（偏移量）** 参数：
 
 ```
 ENVI 完整公式: L = DN × Gain + Offset
@@ -927,5 +927,6 @@ raster = e.OpenRaster(xml_file, DATASET_NAME='CRESDA GF-1')
 ---
 
 **文档结束**
+
 
 
